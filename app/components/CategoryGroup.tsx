@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { LinkCard } from "./LinkCard";
 import { isLightColor } from "@/lib/utils";
@@ -10,6 +9,8 @@ type Props = {
   node: CategoryNode;
   categoriesById: Map<string, Category>;
   categories: Category[];
+  collapsed: Set<string>;
+  onToggleCollapsed: (id: string) => void;
   depth?: number;
   onDeleteLink: (id: string) => void;
   onDeleteCategory: (id: string) => void;
@@ -21,13 +22,15 @@ export function CategoryGroup({
   node,
   categoriesById,
   categories,
+  collapsed,
+  onToggleCollapsed,
   depth = 0,
   onDeleteLink,
   onDeleteCategory,
   onEditLink,
   onMoveLink,
 }: Props) {
-  const [open, setOpen] = useState(true);
+  const open = !collapsed.has(node.id);
   const total =
     node.links.length +
     node.children.reduce((sum, c) => sum + countLinks(c), 0);
@@ -40,7 +43,7 @@ export function CategoryGroup({
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3">
         <button
-          onClick={() => setOpen((v) => !v)}
+          onClick={() => onToggleCollapsed(node.id)}
           className="flex flex-1 items-center gap-3 text-left"
         >
           {open ? (
@@ -94,6 +97,8 @@ export function CategoryGroup({
               node={child}
               categoriesById={categoriesById}
               categories={categories}
+              collapsed={collapsed}
+              onToggleCollapsed={onToggleCollapsed}
               depth={depth + 1}
               onDeleteLink={onDeleteLink}
               onDeleteCategory={onDeleteCategory}

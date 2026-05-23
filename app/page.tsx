@@ -13,6 +13,34 @@ import { AddCategoryModal } from "./components/AddCategoryModal";
 import { Sidebar } from "./components/Sidebar";
 import type { Category, CategoryNode, Link } from "./components/types";
 
+const STORAGE_KEY = "linkvault:ui-state";
+
+type PersistedState = {
+  activeCategoryId: string | null;
+  uncategorizedOpen: boolean;
+  collapsedCategoryIds: string[];
+};
+
+function loadPersistedState(): PersistedState {
+  if (typeof window === "undefined") {
+    return { activeCategoryId: null, uncategorizedOpen: true, collapsedCategoryIds: [] };
+  }
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { activeCategoryId: null, uncategorizedOpen: true, collapsedCategoryIds: [] };
+    const parsed = JSON.parse(raw) as Partial<PersistedState>;
+    return {
+      activeCategoryId: parsed.activeCategoryId ?? null,
+      uncategorizedOpen: parsed.uncategorizedOpen ?? true,
+      collapsedCategoryIds: Array.isArray(parsed.collapsedCategoryIds)
+        ? parsed.collapsedCategoryIds
+        : [],
+    };
+  } catch {
+    return { activeCategoryId: null, uncategorizedOpen: true, collapsedCategoryIds: [] };
+  }
+}
+
 export default function Home() {
   const [links, setLinks] = useState<Link[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -23,9 +51,13 @@ export default function Home() {
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [uncategorizedOpen, setUncategorizedOpen] = useState(true);
+  const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<string>>(
+    new Set(),
+  );
   const [prefillUrl, setPrefillUrl] = useState("");
   const [prefillTitle, setPrefillTitle] = useState("");
   const [editingLink, setEditingLink] = useState<Link | null>(null);
+  const [hydrated, setHydrated] = useState(false);
 
   function openNewLink() {
     setEditingLink(null);
@@ -38,6 +70,39 @@ export default function Home() {
     setEditingLink(link);
     setSaveModalOpen(true);
   }
+
+  function toggleCategoryCollapsed(id: string) {
+    setCollapsedCategoryIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Load persisted UI state once on mount.
+  useEffect(() => {
+    const persisted = loadPersistedState();
+    setActiveCategoryId(persisted.activeCategoryId);
+    setUncategorizedOpen(persisted.uncategorizedOpen);
+    setCollapsedCategoryIds(new Set(persisted.collapsedCategoryIds));
+    setHydrated(true);
+  }, []);
+
+  // Persist whenever the relevant slice changes (after hydration).
+  useEffect(() => {
+    if (!hydrated) return;
+    const payload: PersistedState = {
+      activeCategoryId,
+      uncategorizedOpen,
+      collapsedCategoryIds: [...collapsedCategoryIds],
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // storage unavailable — ignore
+    }
+  }, [hydrated, activeCategoryId, uncategorizedOpen, collapsedCategoryIds]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -158,7 +223,7 @@ export default function Home() {
     <div className="min-h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <header className="border-b border-zinc-200 dark:border-white/10 bg-white/80 dark:bg-zinc-950/80 backdrop-blur sticky top-0 z-30">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
               className="rounded-lg p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
@@ -166,22 +231,20 @@ export default function Home() {
             >
               <Menu className="h-5 w-5" />
             </button>
-            <Image
-              src="/logo-banner-light.png"
-              alt="LinkVault"
-              width={800}
-              height={448}
-              priority
-              className="h-12 w-auto block dark:hidden"
-            />
-            <Image
-              src="/logo-banner-dark.png"
-              alt="LinkVault"
-              width={800}
-              height={448}
-              priority
-              className="h-12 w-auto hidden dark:block"
-            />
+            <div className="flex items-center gap-2">
+              <Image
+                src="/logo-mark.png"
+                alt=""
+                width={96}
+                height={96}
+                priority
+                className="h-9 w-9"
+              />
+              <span className="text-xl tracking-tight text-zinc-900 dark:text-zinc-100">
+                <span className="font-semibold">Link</span>
+                <span className="font-bold">Vault</span>
+              </span>
+            </div>
           </div>
         </div>
       </header>
@@ -214,6 +277,8 @@ export default function Home() {
                     node={node}
                     categoriesById={categoriesById}
                     categories={categories}
+                    collapsed={collapsedCategoryIds}
+                    onToggleCollapsed={toggleCategoryCollapsed}
                     onDeleteLink={handleDeleteLink}
                     onDeleteCategory={handleDeleteCategory}
                     onEditLink={handleEditLink}
