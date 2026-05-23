@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Loader2, Sparkles, Link2 } from "lucide-react";
 import { Modal } from "./Modal";
 import { isValidUrl } from "@/lib/utils";
 import type { Category, Link } from "./types";
@@ -16,6 +16,14 @@ type Props = {
   onSaved: (link: Link) => void;
 };
 
+type PreviewData = {
+  title: string | null;
+  description: string | null;
+  image: string | null;
+  siteName: string | null;
+  summary: string | null;
+};
+
 export function SaveLinkModal({
   open,
   onClose,
@@ -28,29 +36,82 @@ export function SaveLinkModal({
   const isEdit = Boolean(editLink);
   const [url, setUrl] = useState(initialUrl);
   const [title, setTitle] = useState(initialTitle);
+  const [summary, setSummary] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [metaImage, setMetaImage] = useState<string>("");
   const [aiSummarize, setAiSummarize] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [preview, setPreview] = useState<PreviewData | null>(null);
+  const [loadingPreview, setLoadingPreview] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     if (open) {
       if (editLink) {
         setUrl(editLink.url);
         setTitle(editLink.title);
+        setSummary(editLink.summary ?? "");
         setCategoryId(editLink.categoryId ?? "");
         setMetaImage(editLink.metaImage ?? "");
+        setPreview(null);
       } else {
         setUrl(initialUrl);
         setTitle(initialTitle);
+        setSummary("");
         setCategoryId("");
         setMetaImage("");
+        setPreview(null);
       }
       setAiSummarize(false);
       setError(null);
     }
   }, [open, initialUrl, initialTitle, editLink]);
+
+  // Auto-fetch OG preview when URL changes
+  async function fetchPreview(u: string) {
+    if (!u || !isValidUrl(u)) {
+      setPreview(null);
+      return;
+    }
+    setLoadingPreview(true);
+    try {
+      const res = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: u }),
+      });
+      if (res.ok) {
+        const data: PreviewData = await res.json();
+        setPreview(data);
+        // Auto-fill fields if empty
+        if (data.title && !title) setTitle(data.title);
+        if (data.description && !summary) setSummary(data.description);
+        if (data.image && !metaImage) setMetaImage(data.image);
+      }
+    } catch {
+      // Silently fail — preview is optional
+    } finally {
+      setLoadingPreview(false);
+    }
+  }
+
+  function handleUrlBlur() {
+    if (!isEdit && url && isValidUrl(url)) {
+      void fetchPreview(url);
+    }
+  }
+
+  function handleUrlChange(val: string) {
+    setUrl(val);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    // Only auto-fetch when URL looks complete (has domain)
+    if (val.includes(".") && val.length > 8) {
+      debounceRef.current = setTimeout(() => {
+        if (!isEdit && isValidUrl(val)) void fetchPreview(val);
+      }, 1200);
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,28 +127,21 @@ export function SaveLinkModal({
 
     setSubmitting(true);
     try {
-      let summary: string | null = editLink?.summary ?? null;
-      if (!isEdit && aiSummarize) {
-        try {
-          const res = await fetch("/api/summarize", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ url }),
-          });
-          if (res.ok) {
-            const data = await res.json();
-            summary = data.summary ?? null;
-          }
-        } catch {
-          // Save without summary if AI fails
-        }
+      let finalSummary = summary.trim() || null;
+      let finalMetaImage = metaImage.trim() || null;
+
+      // If user wants AI enhance, append to whatever we already have
+      if (!isEdit && aiSummarize && preview?.summary && summary.trim()) {
+        finalSummary = summary.trim() + "\n\n" + preview.summary;
+      } else if (!isEdit && aiSummarize && preview?.summary) {
+        finalSummary = preview.summary;
       }
 
       const payload = {
         url,
         title,
-        summary,
-        metaImage: metaImage.trim() ? metaImage.trim() : null,
+        summary: finalSummary,
+        metaImage: finalMetaImage,
         categoryId: categoryId || null,
       };
 
@@ -116,14 +170,14 @@ export function SaveLinkModal({
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? "Edit link" : "Save link"}>
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* URL field */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            URL
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">URL</label>
           <input
             type="url"
             value={url}
-            onChange={(e) => setUrl(e.target.value)}
+            onChange={(e) => handleUrlChange(e.target.value)}
+            onBlur={handleUrlBlur}
             placeholder="https://…"
             required
             className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
@@ -131,10 +185,46 @@ export function SaveLinkModal({
           />
         </div>
 
+        {/* Live OG preview */}
+        {!isEdit && (loadingPreview || preview) && (
+          <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+            {loadingPreview ? (
+              <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-500">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Fetching preview…
+              </div>
+            ) : preview?.image || preview?.title || preview?.description ? (
+              <div className="flex gap-3 p-3">
+                {preview.image && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={preview.image}
+                    alt=""
+                    className="h-16 w-16 flex-shrink-0 rounded-lg object-cover border border-white/10 bg-white/[0.03]"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none";
+                    }}
+                  />
+                )}
+                <div className="flex-1 min-w-0">
+                  {preview.siteName && (
+                    <p className="text-xs text-zinc-500 mb-0.5 truncate">{preview.siteName}</p>
+                  )}
+                  {preview.title && (
+                    <p className="text-sm font-medium text-zinc-200 truncate">{preview.title}</p>
+                  )}
+                  {preview.description && (
+                    <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">{preview.description}</p>
+                  )}
+                </div>
+              </div>
+            ) : null}
+          </div>
+        )}
+
+        {/* Title field */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Title
-          </label>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Title</label>
           <input
             type="text"
             value={title}
@@ -145,10 +235,23 @@ export function SaveLinkModal({
           />
         </div>
 
+        {/* Summary / Notes */}
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Category
+            Notes <span className="text-zinc-500">(optional)</span>
           </label>
+          <textarea
+            value={summary}
+            onChange={(e) => setSummary(e.target.value)}
+            placeholder="Your notes or auto-filled description…"
+            rows={2}
+            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60 resize-none"
+          />
+        </div>
+
+        {/* Category */}
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">Category</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
@@ -164,19 +267,21 @@ export function SaveLinkModal({
           </select>
         </div>
 
+        {/* Image URL */}
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-1">
-            OG image <span className="text-zinc-500">(optional)</span>
+            Image <span className="text-zinc-500">(auto-filled from link)</span>
           </label>
           <input
             type="url"
             value={metaImage}
             onChange={(e) => setMetaImage(e.target.value)}
-            placeholder="OG Image URL (optional)"
+            placeholder="Image URL (auto-filled from link)"
             className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
           />
         </div>
 
+        {/* AI enhance toggle */}
         {!isEdit && (
           <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer hover:bg-white/[0.04]">
             <input
@@ -186,13 +291,16 @@ export function SaveLinkModal({
               className="h-4 w-4 rounded border-white/20 bg-transparent accent-indigo-500"
             />
             <Sparkles className="h-4 w-4 text-indigo-400" />
-            <span className="text-sm text-zinc-200">Generate AI summary</span>
+            <div>
+              <span className="text-sm text-zinc-200">Enhance with AI</span>
+              <p className="text-xs text-zinc-500">
+                Append an AI summary to your notes
+              </p>
+            </div>
           </label>
         )}
 
-        {error && (
-          <p className="text-sm text-red-400">{error}</p>
-        )}
+        {error && <p className="text-sm text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <button
