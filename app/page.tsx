@@ -146,12 +146,20 @@ export default function Home() {
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Image
-              src="/logo-banner.png"
+              src="/logo-banner-light.png"
               alt="LinkVault"
-              width={180}
-              height={101}
+              width={800}
+              height={448}
               priority
-              className="h-12 w-auto"
+              className="h-12 w-auto block dark:hidden"
+            />
+            <Image
+              src="/logo-banner-dark.png"
+              alt="LinkVault"
+              width={800}
+              height={448}
+              priority
+              className="h-12 w-auto hidden dark:block"
             />
           </div>
           <div className="flex items-center gap-2">
