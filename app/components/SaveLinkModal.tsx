@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Loader2, FolderPlus } from "lucide-react";
+import { Loader2, FolderPlus, RefreshCw } from "lucide-react";
 import { Modal } from "./Modal";
 import { AddCategoryModal } from "./AddCategoryModal";
 import { isValidUrl } from "@/lib/utils";
@@ -172,7 +172,24 @@ export function SaveLinkModal({
       <Modal open={open} onClose={onClose} title={isEdit ? "Edit link" : "Save link"}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={labelClass}>URL</label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">URL</label>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isValidUrl(url)) void fetchPreview(url);
+                }}
+                disabled={loadingPreview || !isValidUrl(url)}
+                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {loadingPreview ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-3.5 w-3.5" />
+                )}
+                Refetch
+              </button>
+            </div>
             <input
               type="url"
               value={url}
@@ -185,7 +202,7 @@ export function SaveLinkModal({
             />
           </div>
 
-          {!isEdit && (loadingPreview || preview) && (
+          {(loadingPreview || preview) && (
             <div className="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] overflow-hidden">
               {loadingPreview ? (
                 <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-500">
