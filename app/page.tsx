@@ -141,8 +141,8 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-full bg-zinc-950 text-zinc-100">
-      <header className="border-b border-white/10 bg-zinc-950/80 backdrop-blur sticky top-0 z-30">
+    <div className="min-h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <header className="border-b border-zinc-200 dark:border-white/10 bg-white/80 dark:bg-zinc-950/80 backdrop-blur sticky top-0 z-30">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
           <div className="flex items-center gap-3">
             <Image
@@ -157,14 +157,14 @@ export default function Home() {
           <div className="flex items-center gap-2">
             <a
               href="/bookmarklet"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06]"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
             >
               <Bookmark className="h-4 w-4" />
               <span className="hidden sm:inline">Bookmarklet</span>
             </a>
             <button
               onClick={() => setCategoryModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06]"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
             >
               <FolderPlus className="h-4 w-4" />
               <span className="hidden sm:inline">New category</span>
@@ -205,9 +205,9 @@ export default function Home() {
                   />
                 ))}
                 {uncategorizedLinks.length > 0 && (
-                  <section className="rounded-2xl border border-white/10 bg-white/[0.02]">
+                  <section className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02]">
                     <header className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-700 px-3 py-1 text-sm font-semibold text-zinc-100">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 px-3 py-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                         Uncategorized
                       </span>
                       <span className="ml-2 text-xs text-zinc-500">
@@ -227,7 +227,7 @@ export default function Home() {
                   </section>
                 )}
                 {filteredLinks.length === 0 && (
-                  <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-zinc-500">
+                  <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-white/10 p-8 text-center text-sm text-zinc-500">
                     No links match your search.
                   </div>
                 )}
@@ -264,9 +264,9 @@ export default function Home() {
 
 function EmptyState({ onAdd }: { onAdd: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center">
-      <Bookmark className="mx-auto h-10 w-10 text-zinc-600" />
-      <h2 className="mt-4 text-lg font-medium text-zinc-200">No links yet</h2>
+    <div className="rounded-2xl border border-dashed border-zinc-300 dark:border-white/10 p-12 text-center">
+      <Bookmark className="mx-auto h-10 w-10 text-zinc-400 dark:text-zinc-600" />
+      <h2 className="mt-4 text-lg font-medium text-zinc-800 dark:text-zinc-200">No links yet</h2>
       <p className="mt-1 text-sm text-zinc-500">
         Save your first link to get started.
       </p>

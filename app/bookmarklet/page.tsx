@@ -26,12 +26,12 @@ export default function BookmarkletPage() {
   }
 
   return (
-    <div className="min-h-full bg-zinc-950 text-zinc-100">
-      <header className="border-b border-white/10">
+    <div className="min-h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
+      <header className="border-b border-zinc-200 dark:border-white/10">
         <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-4 sm:px-6">
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-100"
+            className="inline-flex items-center gap-1.5 text-sm text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
           >
             <ArrowLeft className="h-4 w-4" />
             Back
@@ -42,14 +42,14 @@ export default function BookmarkletPage() {
       <main className="mx-auto max-w-3xl px-4 py-10 sm:px-6 space-y-6">
         <div>
           <h1 className="text-2xl font-semibold">Save links from anywhere</h1>
-          <p className="mt-2 text-zinc-400">
+          <p className="mt-2 text-zinc-600 dark:text-zinc-400">
             Drag the button below to your browser&apos;s bookmarks bar. On any
             page, click it to open LinkVault with the URL and title pre-filled.
           </p>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-          <p className="text-sm text-zinc-400 mb-3">
+        <div className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] p-6">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
             Step 1: Drag this button to your bookmarks bar
           </p>
           <a
@@ -63,20 +63,20 @@ export default function BookmarkletPage() {
           </a>
         </div>
 
-        <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
-          <p className="text-sm text-zinc-400 mb-3">
+        <div className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] p-6">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-3">
             Or copy this code and create a bookmark manually
           </p>
-          <pre className="rounded-lg bg-black/40 p-4 text-xs text-zinc-300 overflow-x-auto">
+          <pre className="rounded-lg bg-zinc-100 dark:bg-black/40 p-4 text-xs text-zinc-700 dark:text-zinc-300 overflow-x-auto">
             <code>{href}</code>
           </pre>
           <button
             onClick={copy}
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-1.5 text-sm hover:bg-white/[0.06]"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-white dark:bg-white/[0.03] px-3 py-1.5 text-sm hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
           >
             {copied ? (
               <>
-                <Check className="h-4 w-4 text-emerald-400" />
+                <Check className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
                 Copied!
               </>
             ) : (

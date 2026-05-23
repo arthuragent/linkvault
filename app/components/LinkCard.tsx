@@ -17,14 +17,14 @@ export function LinkCard({ link, category, onDelete, onEdit }: Props) {
   const domain = getDomain(link.url);
 
   return (
-    <div className="group rounded-2xl border border-white/10 bg-white/[0.03] overflow-hidden transition-all hover:border-white/30 hover:bg-white/[0.06]">
+    <div className="group rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-white/30 hover:bg-zinc-100 dark:hover:bg-white/[0.06]">
       {/* Full-width preview image */}
       {link.metaImage && (
         <a
           href={link.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="block aspect-video w-full bg-white/[0.03]"
+          className="block aspect-video w-full bg-zinc-100 dark:bg-white/[0.03]"
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -61,21 +61,21 @@ export function LinkCard({ link, category, onDelete, onEdit }: Props) {
               href={link.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-zinc-100"
+              className="rounded-lg p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
               aria-label="Open link"
             >
               <ExternalLink className="h-4 w-4" />
             </a>
             <button
               onClick={() => onEdit(link)}
-              className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-zinc-100"
+              className="rounded-lg p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
               aria-label="Edit link"
             >
               <Pencil className="h-4 w-4" />
             </button>
             <button
               onClick={() => onDelete(link.id)}
-              className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-500/20 hover:text-red-400"
+              className="rounded-lg p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400"
               aria-label="Delete link"
             >
               <Trash2 className="h-4 w-4" />
@@ -90,14 +90,14 @@ export function LinkCard({ link, category, onDelete, onEdit }: Props) {
           rel="noopener noreferrer"
           className="block"
         >
-          <h3 className="font-semibold text-zinc-100 leading-snug line-clamp-2 mb-1">
+          <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2 mb-1">
             {link.title}
           </h3>
         </a>
 
         {/* Summary / Description */}
         {link.summary && (
-          <p className="text-sm text-zinc-400 leading-relaxed line-clamp-3">
+          <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-3">
             {link.summary}
           </p>
         )}

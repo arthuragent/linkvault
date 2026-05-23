@@ -31,7 +31,7 @@ export function CategoryGroup({
 
   return (
     <section
-      className="rounded-2xl border border-white/10 bg-white/[0.02]"
+      className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02]"
       style={{ marginLeft: depth * 16 }}
     >
       <header className="flex items-center justify-between gap-3 px-4 py-3">
@@ -61,7 +61,7 @@ export function CategoryGroup({
               onDeleteCategory(node.id);
             }
           }}
-          className="rounded-lg p-1.5 text-zinc-500 hover:bg-red-500/20 hover:text-red-400"
+          className="rounded-lg p-1.5 text-zinc-500 hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400"
           aria-label="Delete category"
         >
           <Trash2 className="h-4 w-4" />

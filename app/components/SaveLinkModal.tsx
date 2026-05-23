@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Loader2, Sparkles, Link2 } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import { Modal } from "./Modal";
 import { isValidUrl } from "@/lib/utils";
 import type { Category, Link } from "./types";
@@ -128,7 +128,7 @@ export function SaveLinkModal({
     setSubmitting(true);
     try {
       let finalSummary = summary.trim() || null;
-      let finalMetaImage = metaImage.trim() || null;
+      const finalMetaImage = metaImage.trim() || null;
 
       // If user wants AI enhance, append to whatever we already have
       if (!isEdit && aiSummarize && preview?.summary && summary.trim()) {
@@ -167,12 +167,16 @@ export function SaveLinkModal({
     }
   };
 
+  const inputClass =
+    "w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] px-3 py-2 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-indigo-500/60";
+  const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1";
+
   return (
     <Modal open={open} onClose={onClose} title={isEdit ? "Edit link" : "Save link"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* URL field */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">URL</label>
+          <label className={labelClass}>URL</label>
           <input
             type="url"
             value={url}
@@ -180,14 +184,14 @@ export function SaveLinkModal({
             onBlur={handleUrlBlur}
             placeholder="https://…"
             required
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
+            className={inputClass}
             autoFocus
           />
         </div>
 
         {/* Live OG preview */}
         {!isEdit && (loadingPreview || preview) && (
-          <div className="rounded-xl border border-white/10 bg-white/[0.02] overflow-hidden">
+          <div className="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] overflow-hidden">
             {loadingPreview ? (
               <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -200,7 +204,7 @@ export function SaveLinkModal({
                   <img
                     src={preview.image}
                     alt=""
-                    className="h-16 w-16 flex-shrink-0 rounded-lg object-cover border border-white/10 bg-white/[0.03]"
+                    className="h-16 w-16 flex-shrink-0 rounded-lg object-cover border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-white/[0.03]"
                     onError={(e) => {
                       e.currentTarget.style.display = "none";
                     }}
@@ -211,10 +215,10 @@ export function SaveLinkModal({
                     <p className="text-xs text-zinc-500 mb-0.5 truncate">{preview.siteName}</p>
                   )}
                   {preview.title && (
-                    <p className="text-sm font-medium text-zinc-200 truncate">{preview.title}</p>
+                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{preview.title}</p>
                   )}
                   {preview.description && (
-                    <p className="text-xs text-zinc-400 mt-0.5 line-clamp-2">{preview.description}</p>
+                    <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 line-clamp-2">{preview.description}</p>
                   )}
                 </div>
               </div>
@@ -224,38 +228,38 @@ export function SaveLinkModal({
 
         {/* Title field */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Title</label>
+          <label className={labelClass}>Title</label>
           <input
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Page title"
             required
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
+            className={inputClass}
           />
         </div>
 
         {/* Summary / Notes */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Notes <span className="text-zinc-500">(optional)</span>
+          <label className={labelClass}>
+            Notes <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
           </label>
           <textarea
             value={summary}
             onChange={(e) => setSummary(e.target.value)}
             placeholder="Your notes or auto-filled description…"
             rows={2}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60 resize-none"
+            className={`${inputClass} resize-none`}
           />
         </div>
 
         {/* Category */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Category</label>
+          <label className={labelClass}>Category</label>
           <select
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 outline-none focus:border-indigo-500/60"
+            className={inputClass}
           >
             <option value="">Uncategorized</option>
             {categories.map((c) => (
@@ -269,30 +273,30 @@ export function SaveLinkModal({
 
         {/* Image URL */}
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Image <span className="text-zinc-500">(auto-filled from link)</span>
+          <label className={labelClass}>
+            Image <span className="text-zinc-400 dark:text-zinc-500">(auto-filled from link)</span>
           </label>
           <input
             type="url"
             value={metaImage}
             onChange={(e) => setMetaImage(e.target.value)}
             placeholder="Image URL (auto-filled from link)"
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
+            className={inputClass}
           />
         </div>
 
         {/* AI enhance toggle */}
         {!isEdit && (
-          <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer hover:bg-white/[0.04]">
+          <label className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] px-3 py-2.5 cursor-pointer hover:bg-zinc-100 dark:hover:bg-white/[0.04]">
             <input
               type="checkbox"
               checked={aiSummarize}
               onChange={(e) => setAiSummarize(e.target.checked)}
-              className="h-4 w-4 rounded border-white/20 bg-transparent accent-indigo-500"
+              className="h-4 w-4 rounded border-zinc-300 dark:border-white/20 bg-transparent accent-indigo-500"
             />
-            <Sparkles className="h-4 w-4 text-indigo-400" />
+            <Sparkles className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
             <div>
-              <span className="text-sm text-zinc-200">Enhance with AI</span>
+              <span className="text-sm text-zinc-800 dark:text-zinc-200">Enhance with AI</span>
               <p className="text-xs text-zinc-500">
                 Append an AI summary to your notes
               </p>
@@ -300,14 +304,14 @@ export function SaveLinkModal({
           </label>
         )}
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg px-4 py-2 text-sm text-zinc-300 hover:bg-white/5"
+            className="rounded-lg px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
           >
             Cancel
           </button>

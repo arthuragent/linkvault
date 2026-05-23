@@ -17,8 +17,8 @@ export function CategoryFilter({ categories, activeId, onSelect }: Props) {
         className={cn(
           "rounded-full px-3 py-1 text-sm font-medium border transition-all",
           activeId === null
-            ? "border-white/40 bg-white/10 text-zinc-100"
-            : "border-white/10 bg-white/[0.02] text-zinc-400 hover:bg-white/[0.06]",
+            ? "border-zinc-400 bg-zinc-200 text-zinc-900 dark:border-white/40 dark:bg-white/10 dark:text-zinc-100"
+            : "border-zinc-200 bg-zinc-50 text-zinc-600 hover:bg-zinc-100 dark:border-white/10 dark:bg-white/[0.02] dark:text-zinc-400 dark:hover:bg-white/[0.06]",
         )}
       >
         All
@@ -33,7 +33,7 @@ export function CategoryFilter({ categories, activeId, onSelect }: Props) {
             className={cn(
               "rounded-full px-3 py-1 text-sm font-medium border transition-all flex items-center gap-1.5",
               active
-                ? "border-white/40"
+                ? "border-zinc-700 dark:border-white/40"
                 : "border-transparent opacity-70 hover:opacity-100",
             )}
             style={{

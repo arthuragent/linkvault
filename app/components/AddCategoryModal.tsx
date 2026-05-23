@@ -73,11 +73,15 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
     }
   };
 
+  const inputClass =
+    "w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] px-3 py-2 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-indigo-500/60";
+  const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300";
+
   return (
     <Modal open={open} onClose={onClose} title="New category">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">Name</label>
+          <label className={`${labelClass} mb-1`}>Name</label>
           <input
             type="text"
             value={name}
@@ -85,12 +89,12 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
             placeholder="e.g. Reading list"
             required
             autoFocus
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
+            className={inputClass}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">Color</label>
+          <label className={`${labelClass} mb-2`}>Color</label>
           <div className="grid grid-cols-12 gap-2">
             {PRESET_COLORS.map((c) => (
               <button
@@ -100,7 +104,7 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
                 className="h-8 rounded-full border-2 transition-transform hover:scale-110"
                 style={{
                   backgroundColor: c,
-                  borderColor: color === c ? "#ffffff" : "transparent",
+                  borderColor: color === c ? "var(--foreground)" : "transparent",
                 }}
                 aria-label={`Pick ${c}`}
               />
@@ -109,15 +113,17 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-2">
-            Emoji <span className="text-zinc-500">(optional)</span>
+          <label className={`${labelClass} mb-2`}>
+            Emoji <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
           </label>
           <div className="flex flex-wrap gap-2 mb-2">
             <button
               type="button"
               onClick={() => setEmoji("")}
               className={`h-9 w-9 rounded-lg border text-sm ${
-                emoji === "" ? "border-white/60 bg-white/10" : "border-white/10 bg-white/[0.02]"
+                emoji === ""
+                  ? "border-zinc-700 bg-zinc-100 dark:border-white/60 dark:bg-white/10"
+                  : "border-zinc-200 bg-zinc-50 dark:border-white/10 dark:bg-white/[0.02]"
               }`}
             >
               —
@@ -128,7 +134,9 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
                 type="button"
                 onClick={() => setEmoji(e)}
                 className={`h-9 w-9 rounded-lg border text-lg ${
-                  emoji === e ? "border-white/60 bg-white/10" : "border-white/10 bg-white/[0.02]"
+                  emoji === e
+                    ? "border-zinc-700 bg-zinc-100 dark:border-white/60 dark:bg-white/10"
+                    : "border-zinc-200 bg-zinc-50 dark:border-white/10 dark:bg-white/[0.02]"
                 }`}
               >
                 {e}
@@ -141,18 +149,18 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
             onChange={(e) => setEmoji(e.target.value)}
             placeholder="Or type your own"
             maxLength={4}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
+            className={inputClass}
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-zinc-300 mb-1">
-            Parent category <span className="text-zinc-500">(optional)</span>
+          <label className={`${labelClass} mb-1`}>
+            Parent category <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
           </label>
           <select
             value={parentId}
             onChange={(e) => setParentId(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 outline-none focus:border-indigo-500/60"
+            className={inputClass}
           >
             <option value="">None (top-level)</option>
             {categories.map((c) => (
@@ -164,14 +172,14 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
           </select>
         </div>
 
-        {error && <p className="text-sm text-red-400">{error}</p>}
+        {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
 
         <div className="flex justify-end gap-2 pt-2">
           <button
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-lg px-4 py-2 text-sm text-zinc-300 hover:bg-white/5"
+            className="rounded-lg px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
           >
             Cancel
           </button>
