@@ -8,6 +8,8 @@ import {
   Check,
   FolderInput,
   ArrowLeft,
+  RefreshCw,
+  Loader2,
 } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
 import type { Category, Link } from "./types";
@@ -19,6 +21,7 @@ type Props = {
   onDelete: (id: string) => void;
   onEdit: (link: Link) => void;
   onMove: (id: string, categoryId: string | null) => void;
+  onRefresh: (link: Link) => Promise<void> | void;
 };
 
 const LONG_PRESS_MS = 450;
@@ -30,6 +33,7 @@ export function LinkCard({
   onDelete,
   onEdit,
   onMove,
+  onRefresh,
 }: Props) {
   const color = category?.color ?? "#6366f1";
   const textOnColor = isLightColor(color) ? "#0a0a0a" : "#ffffff";
@@ -37,6 +41,7 @@ export function LinkCard({
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFiredRef = useRef(false);
 
@@ -118,6 +123,16 @@ export function LinkCard({
     }
   }
 
+  async function handleRefresh() {
+    setMenuOpen(false);
+    setRefreshing(true);
+    try {
+      await onRefresh(link);
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
   return (
     <>
       <div
@@ -195,7 +210,18 @@ export function LinkCard({
           onShare={handleShare}
           onDelete={handleDelete}
           onPickCategory={handlePickCategory}
+          onRefresh={handleRefresh}
         />
+      )}
+
+      {refreshing && (
+        <div
+          role="status"
+          className="fixed bottom-24 left-1/2 z-50 -translate-x-1/2 rounded-full bg-zinc-900 dark:bg-zinc-100 px-4 py-2 text-xs font-medium text-white dark:text-zinc-900 shadow-lg flex items-center gap-2"
+        >
+          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          Refreshing preview…
+        </div>
       )}
 
       {copied && (
@@ -218,6 +244,7 @@ type MenuProps = {
   onShare: () => void;
   onDelete: () => void;
   onPickCategory: (categoryId: string | null) => void;
+  onRefresh: () => void;
 };
 
 function LinkActionsMenu({
@@ -228,6 +255,7 @@ function LinkActionsMenu({
   onShare,
   onDelete,
   onPickCategory,
+  onRefresh,
 }: MenuProps) {
   const [view, setView] = useState<"actions" | "move">("actions");
 
@@ -265,6 +293,11 @@ function LinkActionsMenu({
                 icon={FolderInput}
                 label="Move to category"
                 onClick={() => setView("move")}
+              />
+              <MenuItem
+                icon={RefreshCw}
+                label="Refresh preview"
+                onClick={onRefresh}
               />
               <MenuItem icon={Share2} label="Share" onClick={onShare} />
               <MenuItem

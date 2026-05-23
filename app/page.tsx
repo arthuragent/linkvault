@@ -195,6 +195,35 @@ export default function Home() {
     });
   }
 
+  async function handleRefreshLink(link: Link) {
+    try {
+      const res = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: link.url }),
+      });
+      if (!res.ok) return;
+      const og = await res.json();
+      const updates: Record<string, string | null> = {};
+      if (og.title) updates.title = og.title;
+      if (og.description) updates.summary = og.description;
+      if (og.image) updates.metaImage = og.image;
+      if (Object.keys(updates).length === 0) return;
+      const patchRes = await fetch(`/api/links/${link.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(updates),
+      });
+      if (!patchRes.ok) return;
+      const data = await patchRes.json();
+      setLinks((prev) =>
+        prev.map((l) => (l.id === link.id ? data.link : l)),
+      );
+    } catch {
+      // ignore — refresh is opt-in, user can retry
+    }
+  }
+
   async function handleDeleteCategory(id: string) {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     setLinks((prev) =>
@@ -283,6 +312,7 @@ export default function Home() {
                     onDeleteCategory={handleDeleteCategory}
                     onEditLink={handleEditLink}
                     onMoveLink={handleMoveLink}
+                    onRefreshLink={handleRefreshLink}
                   />
                 ))}
                 {uncategorizedLinks.length > 0 && (
@@ -313,6 +343,7 @@ export default function Home() {
                             onDelete={handleDeleteLink}
                             onEdit={handleEditLink}
                             onMove={handleMoveLink}
+                            onRefresh={handleRefreshLink}
                           />
                         ))}
                       </div>

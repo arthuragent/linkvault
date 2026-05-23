@@ -16,6 +16,7 @@ type Props = {
   onDeleteCategory: (id: string) => void;
   onEditLink: (link: Link) => void;
   onMoveLink: (id: string, categoryId: string | null) => void;
+  onRefreshLink: (link: Link) => Promise<void> | void;
 };
 
 export function CategoryGroup({
@@ -29,6 +30,7 @@ export function CategoryGroup({
   onDeleteCategory,
   onEditLink,
   onMoveLink,
+  onRefreshLink,
 }: Props) {
   const open = !collapsed.has(node.id);
   const total =
@@ -89,6 +91,7 @@ export function CategoryGroup({
               onDelete={onDeleteLink}
               onEdit={onEditLink}
               onMove={onMoveLink}
+              onRefresh={onRefreshLink}
             />
           ))}
           {node.children.map((child) => (
@@ -104,6 +107,7 @@ export function CategoryGroup({
               onDeleteCategory={onDeleteCategory}
               onEditLink={onEditLink}
               onMoveLink={onMoveLink}
+              onRefreshLink={onRefreshLink}
             />
           ))}
         </div>
