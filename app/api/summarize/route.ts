@@ -3,199 +3,120 @@ import { NextResponse } from "next/server";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+// Social-crawler UAs unlock OG tags on Facebook, Instagram, X/Twitter, LinkedIn,
+// and most sites that strip metadata when they think a real user is visiting.
+// Order matters: try Facebook's first (most permissive on FB), then Twitterbot
+// (good fallback), then a real browser UA as a last resort.
+const CRAWLER_UAS = [
+  "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+  "Mozilla/5.0 (compatible; Twitterbot/1.0)",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+];
+
 function extractYtVideoId(url: string): string | null {
-  const patterns = [
+  const m = url.match(
     /(?:youtube\.com\/(?:watch\?v=|embed\/|shorts\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/,
-  ];
-  for (const p of patterns) {
-    const m = url.match(p);
-    if (m) return m[1];
-  }
-  return null;
+  );
+  return m ? m[1] : null;
 }
 
 function getYtThumbnail(videoId: string): string {
   return `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`;
 }
 
-function getYtTitle(html: string, videoId: string): string | null {
-  // Try JSON-LD schema first
-  const jsonLd = html.match(/<script[^>]+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/i);
-  if (jsonLd) {
-    try {
-      const parsed = JSON.parse(jsonLd[1]);
-      const items = Array.isArray(parsed) ? parsed : [parsed];
-      for (const item of items) {
-        if (item["@type"] === "VideoObject" && item.name) return item.name;
-      }
-    } catch {}
+const HTML_ENTITIES: Record<string, string> = {
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&apos;": "'",
+  "&#39;": "'",
+  "&nbsp;": " ",
+};
+
+function decodeHtmlEntities(input: string | undefined | null): string | null {
+  if (!input) return null;
+  return input
+    .replace(/&(?:amp|lt|gt|quot|apos|#39|nbsp);/g, (m) => HTML_ENTITIES[m] ?? m)
+    .replace(/&#x([0-9a-f]+);/gi, (_, hex) =>
+      String.fromCodePoint(parseInt(hex, 16)),
+    )
+    .replace(/&#(\d+);/g, (_, dec) =>
+      String.fromCodePoint(parseInt(dec, 10)),
+    );
+}
+
+function extractMetaTags(html: string): Map<string, string> {
+  const tags = new Map<string, string>();
+  const metaRe = /<meta\s+([^>]+?)\s*\/?>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = metaRe.exec(html))) {
+    const attrs = m[1];
+    const key =
+      attrs.match(/(?:property|name|itemprop)\s*=\s*["']([^"']+)["']/i)?.[1] ??
+      null;
+    const value = attrs.match(/content\s*=\s*["']([^"']*)["']/i)?.[1] ?? null;
+    if (key && value !== null) {
+      // First occurrence wins — og:image and twitter:image often appear
+      // multiple times for variants we don't want.
+      const lower = key.toLowerCase();
+      if (!tags.has(lower)) tags.set(lower, value);
+    }
   }
+  return tags;
+}
 
-  // Try og:title
-  const ogTitle = html.match(/<meta[^>]+property="og:title"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+property="og:title"/i);
-  if (ogTitle) return (ogTitle[1] || ogTitle[2])?.trim() || null;
+function pick(tags: Map<string, string>, ...keys: string[]): string | null {
+  for (const k of keys) {
+    const v = tags.get(k.toLowerCase());
+    if (v && v.trim()) return decodeHtmlEntities(v.trim());
+  }
+  return null;
+}
 
-  // Try document title
-  const docTitle = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();
-  return docTitle || null;
+function resolveUrl(maybeRelative: string, base: string): string {
+  try {
+    return new URL(maybeRelative, base).toString();
+  } catch {
+    return maybeRelative;
+  }
+}
+
+async function fetchHtml(url: string): Promise<string | null> {
+  for (const ua of CRAWLER_UAS) {
+    try {
+      const res = await fetch(url, {
+        headers: {
+          "User-Agent": ua,
+          Accept:
+            "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "en-US,en;q=0.5",
+        },
+        redirect: "follow",
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!res.ok) continue;
+      const html = await res.text();
+      // Heuristic: skip obvious "Error" / login-wall stubs and try the next UA.
+      if (
+        html.length < 4000 &&
+        /<title>\s*(Error|Log\s*in|Sign\s*in|Forbidden)\s*<\/title>/i.test(html)
+      ) {
+        continue;
+      }
+      return html;
+    } catch {
+      // try next UA
+    }
+  }
+  return null;
 }
 
 async function fetchOgData(url: string) {
-  // Special handling: YouTube short URLs need video ID extraction
   const ytId = extractYtVideoId(url);
-  const isYtShort = url.includes("youtu.be/");
 
-  try {
-    const res = await fetch(url, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept:
-          "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (!res.ok) return null;
-
-    const html = await res.text();
-
-    // ── YouTube: og:image may not be in static HTML ──────────────
-    if (ytId) {
-      const ogImage =
-        html.match(
-          /<meta[^>]+property="og:image"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+property="og:image"/i,
-        )?.[1] ||
-        html.match(
-          /<meta[^>]+name="twitter:image"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+name="twitter:image"/i,
-        )?.[1];
-
-      const image =
-        ogImage
-          ? ogImage.startsWith("//")
-            ? "https:" + ogImage
-            : ogImage.startsWith("/")
-            ? new URL(url).origin + ogImage
-            : ogImage
-          : getYtThumbnail(ytId);
-
-      const title =
-        getYtTitle(html, ytId) ||
-        html.match(/<meta[^>]+name="title"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+name="title"/i)?.[1]?.trim() ||
-        null;
-
-      const description =
-        html.match(/<meta[^>]+property="og:description"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+property="og:description"/i)?.[1]?.trim() ||
-        html.match(/<meta[^>]+name="description"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+name="description"/i)?.[1]?.trim() ||
-        null;
-
-      const summary = title || description
-        ? ["YouTube", title && `"${title}"`, description?.slice(0, 200)].filter(Boolean).join(" — ")
-        : null;
-
-      return {
-        title: title || "YouTube Video",
-        description,
-        image,
-        siteName: "YouTube",
-        summary,
-      };
-    }
-
-    // ── Generic site ────────────────────────────────────────────────
-    const getMeta = (prop: string, attr = "property") =>
-      html.match(
-        new RegExp(
-          `<meta[^>]+(?:${attr}="${prop}"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+${attr}="${prop}")`,
-          "i",
-        ),
-      );
-
-    const getNameMeta = (name: string) =>
-      html.match(
-        new RegExp(
-          `<meta[^>]+name="${name}"[^>]+content="([^"]*)"|content="([^"]*)"[^>]+name="${name}"`,
-          "i",
-        ),
-      );
-
-    const getTitle = () => {
-      const ogTitle =
-        getMeta("og:title", "property")?.[1] || getMeta("og:title", "property")?.[2];
-      if (ogTitle) return ogTitle.trim();
-      const twitterTitle = getMeta("twitter:title")?.[1] || getMeta("twitter:title")?.[2];
-      if (twitterTitle) return twitterTitle.trim();
-      return (
-        getNameMeta("title")?.[1] ||
-        getNameMeta("title")?.[2] ||
-        null
-      )?.trim();
-    };
-
-    const getDescription = () => {
-      const ogDesc =
-        getMeta("og:description", "property")?.[1] ||
-        getMeta("og:description", "property")?.[2];
-      if (ogDesc) return ogDesc.trim();
-      return (
-        getNameMeta("description")?.[1] ||
-        getNameMeta("description")?.[2] ||
-        null
-      )?.trim();
-    };
-
-    const getImage = () => {
-      const ogImage =
-        getMeta("og:image", "property")?.[1] || getMeta("og:image", "property")?.[2];
-      if (ogImage) {
-        if (ogImage.startsWith("//")) return "https:" + ogImage;
-        if (ogImage.startsWith("/")) {
-          try { return new URL(url).origin + ogImage; } catch { return ogImage; }
-        }
-        return ogImage;
-      }
-      const twitterImage = getMeta("twitter:image")?.[1] || getMeta("twitter:image")?.[2];
-      if (twitterImage) {
-        if (twitterImage.startsWith("//")) return "https:" + twitterImage;
-        if (twitterImage.startsWith("/")) {
-          try { return new URL(url).origin + twitterImage; } catch { return twitterImage; }
-        }
-        return twitterImage;
-      }
-      return null;
-    };
-
-    const getSiteName = () => {
-      const ogSite = getMeta("og:site_name", "property")?.[1] || getMeta("og:site_name", "property")?.[2];
-      return ogSite?.trim() || null;
-    };
-
-    const title = getTitle();
-    const description = getDescription();
-    const image = getImage();
-    const siteName = getSiteName();
-
-    let summary: string | null = null;
-    if (title || description) {
-      const parts: string[] = [];
-      if (siteName) parts.push(`${siteName}`);
-      if (title) parts.push(`"${title}"`);
-      if (description) {
-        parts.push(description.length > 200 ? description.slice(0, 200) + "…" : description);
-      }
-      summary = parts.join(" — ");
-    }
-
-    return {
-      title: title || null,
-      description: description || null,
-      image: image || null,
-      siteName: siteName || null,
-      summary: summary || null,
-    };
-  } catch {
-    // Last resort for YouTube
+  const html = await fetchHtml(url);
+  if (!html) {
     if (ytId) {
       return {
         title: "YouTube Video",
@@ -207,6 +128,66 @@ async function fetchOgData(url: string) {
     }
     return null;
   }
+
+  const tags = extractMetaTags(html);
+
+  let title = pick(
+    tags,
+    "og:title",
+    "twitter:title",
+    "title",
+  );
+  if (!title) {
+    const docTitle = html.match(/<title>([^<]+)<\/title>/i)?.[1]?.trim();
+    title = decodeHtmlEntities(docTitle ?? null);
+  }
+
+  const description = pick(
+    tags,
+    "og:description",
+    "twitter:description",
+    "description",
+  );
+
+  const rawImage = pick(
+    tags,
+    "og:image",
+    "og:image:secure_url",
+    "twitter:image",
+    "twitter:image:src",
+  );
+  const image = rawImage ? resolveUrl(rawImage, url) : null;
+
+  const siteName = pick(tags, "og:site_name", "application-name");
+
+  // YouTube special-case: thumbnail fallback when og:image is missing.
+  let finalImage = image;
+  if (!finalImage && ytId) finalImage = getYtThumbnail(ytId);
+
+  // FB share/reel pages often expose og:title that's just a generic
+  // language-encoded fallback. Keep what we have either way — better than
+  // nothing.
+
+  let summary: string | null = null;
+  if (title || description) {
+    const parts: string[] = [];
+    if (siteName) parts.push(siteName);
+    if (title) parts.push(`"${title}"`);
+    if (description) {
+      parts.push(
+        description.length > 200 ? description.slice(0, 200) + "…" : description,
+      );
+    }
+    summary = parts.join(" — ");
+  }
+
+  return {
+    title: title || (ytId ? "YouTube Video" : null),
+    description: description || null,
+    image: finalImage || null,
+    siteName: siteName || (ytId ? "YouTube" : null),
+    summary: summary || null,
+  };
 }
 
 export async function POST(req: Request) {
@@ -219,7 +200,11 @@ export async function POST(req: Request) {
 
   if (!data) {
     return NextResponse.json({
-      title: null, description: null, image: null, siteName: null, summary: null,
+      title: null,
+      description: null,
+      image: null,
+      siteName: null,
+      summary: null,
     });
   }
 
