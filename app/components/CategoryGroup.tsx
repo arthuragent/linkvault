@@ -9,19 +9,23 @@ import type { Category, CategoryNode, Link } from "./types";
 type Props = {
   node: CategoryNode;
   categoriesById: Map<string, Category>;
+  categories: Category[];
   depth?: number;
   onDeleteLink: (id: string) => void;
   onDeleteCategory: (id: string) => void;
   onEditLink: (link: Link) => void;
+  onMoveLink: (id: string, categoryId: string | null) => void;
 };
 
 export function CategoryGroup({
   node,
   categoriesById,
+  categories,
   depth = 0,
   onDeleteLink,
   onDeleteCategory,
   onEditLink,
+  onMoveLink,
 }: Props) {
   const [open, setOpen] = useState(true);
   const total =
@@ -78,8 +82,10 @@ export function CategoryGroup({
               key={link.id}
               link={link}
               category={categoriesById.get(link.categoryId ?? "")}
+              categories={categories}
               onDelete={onDeleteLink}
               onEdit={onEditLink}
+              onMove={onMoveLink}
             />
           ))}
           {node.children.map((child) => (
@@ -87,10 +93,12 @@ export function CategoryGroup({
               key={child.id}
               node={child}
               categoriesById={categoriesById}
+              categories={categories}
               depth={depth + 1}
               onDeleteLink={onDeleteLink}
               onDeleteCategory={onDeleteCategory}
               onEditLink={onEditLink}
+              onMoveLink={onMoveLink}
             />
           ))}
         </div>

@@ -119,6 +119,17 @@ export default function Home() {
     await fetch(`/api/links/${id}`, { method: "DELETE" });
   }
 
+  async function handleMoveLink(id: string, categoryId: string | null) {
+    setLinks((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, categoryId } : l)),
+    );
+    await fetch(`/api/links/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ categoryId }),
+    });
+  }
+
   async function handleDeleteCategory(id: string) {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     setLinks((prev) =>
@@ -202,9 +213,11 @@ export default function Home() {
                     key={node.id}
                     node={node}
                     categoriesById={categoriesById}
+                    categories={categories}
                     onDeleteLink={handleDeleteLink}
                     onDeleteCategory={handleDeleteCategory}
                     onEditLink={handleEditLink}
+                    onMoveLink={handleMoveLink}
                   />
                 ))}
                 {uncategorizedLinks.length > 0 && (
@@ -222,8 +235,10 @@ export default function Home() {
                         <LinkCard
                           key={link.id}
                           link={link}
+                          categories={categories}
                           onDelete={handleDeleteLink}
                           onEdit={handleEditLink}
+                          onMove={handleMoveLink}
                         />
                       ))}
                     </div>
