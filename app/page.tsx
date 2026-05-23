@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { Loader2, Bookmark, Menu } from "lucide-react";
 import { SearchBar } from "./components/SearchBar";
+import { QuickAddBar } from "./components/QuickAddBar";
 import { CategoryDropdown } from "./components/CategoryDropdown";
 import { CategoryGroup } from "./components/CategoryGroup";
 import { LinkCard } from "./components/LinkCard";
@@ -175,6 +176,7 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">
+        <QuickAddBar onSaved={handleLinkSaved} />
         <SearchBar value={search} onChange={setSearch} />
 
         {categories.length > 0 && (
