@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Loader2, Bookmark, Menu, ChevronDown, ChevronRight } from "lucide-react";
+import { Loader2, Bookmark, Menu, ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { SearchBar } from "./components/SearchBar";
-import { QuickAddBar } from "./components/QuickAddBar";
+import { QuickAddOverlay } from "./components/QuickAddOverlay";
 import { CategoryDropdown } from "./components/CategoryDropdown";
 import { CategoryGroup } from "./components/CategoryGroup";
 import { LinkCard } from "./components/LinkCard";
@@ -50,6 +50,7 @@ export default function Home() {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [uncategorizedOpen, setUncategorizedOpen] = useState(true);
   const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<string>>(
     new Set(),
@@ -275,11 +276,17 @@ export default function Home() {
               </span>
             </div>
           </div>
+          <button
+            onClick={() => setQuickAddOpen(true)}
+            className="rounded-lg p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
+            aria-label="Quick add link"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">
-        <QuickAddBar onSaved={handleLinkSaved} />
         <SearchBar value={search} onChange={setSearch} />
 
         {categories.length > 0 && (
@@ -365,6 +372,12 @@ export default function Home() {
         open={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onNewCategory={() => setCategoryModalOpen(true)}
+      />
+
+      <QuickAddOverlay
+        open={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        onSaved={handleLinkSaved}
       />
 
       <SaveLinkModal
