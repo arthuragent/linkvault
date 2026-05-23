@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
-import { Loader2, Sparkles } from "lucide-react";
+import { Loader2, FolderPlus } from "lucide-react";
 import { Modal } from "./Modal";
+import { AddCategoryModal } from "./AddCategoryModal";
 import { isValidUrl } from "@/lib/utils";
 import type { Category, Link } from "./types";
 
@@ -14,6 +15,7 @@ type Props = {
   initialTitle?: string;
   editLink?: Link;
   onSaved: (link: Link) => void;
+  onCategoryCreated?: (cat: Category) => void;
 };
 
 type PreviewData = {
@@ -32,6 +34,7 @@ export function SaveLinkModal({
   initialTitle = "",
   editLink,
   onSaved,
+  onCategoryCreated,
 }: Props) {
   const isEdit = Boolean(editLink);
   const [url, setUrl] = useState(initialUrl);
@@ -39,11 +42,11 @@ export function SaveLinkModal({
   const [summary, setSummary] = useState("");
   const [categoryId, setCategoryId] = useState<string>("");
   const [metaImage, setMetaImage] = useState<string>("");
-  const [aiSummarize, setAiSummarize] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [loadingPreview, setLoadingPreview] = useState(false);
+  const [addCategoryOpen, setAddCategoryOpen] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -63,12 +66,10 @@ export function SaveLinkModal({
         setMetaImage("");
         setPreview(null);
       }
-      setAiSummarize(false);
       setError(null);
     }
   }, [open, initialUrl, initialTitle, editLink]);
 
-  // Auto-fetch OG preview when URL changes
   async function fetchPreview(u: string) {
     if (!u || !isValidUrl(u)) {
       setPreview(null);
@@ -84,10 +85,10 @@ export function SaveLinkModal({
       if (res.ok) {
         const data: PreviewData = await res.json();
         setPreview(data);
-        // Auto-fill fields if empty
-        if (data.title && !title) setTitle(data.title);
-        if (data.description && !summary) setSummary(data.description);
-        if (data.image && !metaImage) setMetaImage(data.image);
+        // Always sync title + notes + image to the freshly-fetched preview.
+        if (data.title) setTitle(data.title);
+        if (data.description) setSummary(data.description);
+        if (data.image) setMetaImage(data.image);
       }
     } catch {
       // Silently fail — preview is optional
@@ -105,7 +106,6 @@ export function SaveLinkModal({
   function handleUrlChange(val: string) {
     setUrl(val);
     if (debounceRef.current) clearTimeout(debounceRef.current);
-    // Only auto-fetch when URL looks complete (has domain)
     if (val.includes(".") && val.length > 8) {
       debounceRef.current = setTimeout(() => {
         if (!isEdit && isValidUrl(val)) void fetchPreview(val);
@@ -127,21 +127,11 @@ export function SaveLinkModal({
 
     setSubmitting(true);
     try {
-      let finalSummary = summary.trim() || null;
-      const finalMetaImage = metaImage.trim() || null;
-
-      // If user wants AI enhance, append to whatever we already have
-      if (!isEdit && aiSummarize && preview?.summary && summary.trim()) {
-        finalSummary = summary.trim() + "\n\n" + preview.summary;
-      } else if (!isEdit && aiSummarize && preview?.summary) {
-        finalSummary = preview.summary;
-      }
-
       const payload = {
         url,
         title,
-        summary: finalSummary,
-        metaImage: finalMetaImage,
+        summary: summary.trim() || null,
+        metaImage: metaImage.trim() || null,
         categoryId: categoryId || null,
       };
 
@@ -167,164 +157,151 @@ export function SaveLinkModal({
     }
   };
 
+  function handleCategoryCreated(cat: Category) {
+    onCategoryCreated?.(cat);
+    setCategoryId(cat.id);
+    setAddCategoryOpen(false);
+  }
+
   const inputClass =
     "w-full rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] px-3 py-2 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 outline-none focus:border-indigo-500/60";
   const labelClass = "block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1";
 
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? "Edit link" : "Save link"}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        {/* URL field */}
-        <div>
-          <label className={labelClass}>URL</label>
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => handleUrlChange(e.target.value)}
-            onBlur={handleUrlBlur}
-            placeholder="https://…"
-            required
-            className={inputClass}
-            autoFocus
-          />
-        </div>
-
-        {/* Live OG preview */}
-        {!isEdit && (loadingPreview || preview) && (
-          <div className="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] overflow-hidden">
-            {loadingPreview ? (
-              <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-500">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Fetching preview…
-              </div>
-            ) : preview?.image || preview?.title || preview?.description ? (
-              <div className="flex gap-3 p-3">
-                {preview.image && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={preview.image}
-                    alt=""
-                    className="h-16 w-16 flex-shrink-0 rounded-lg object-cover border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-white/[0.03]"
-                    onError={(e) => {
-                      e.currentTarget.style.display = "none";
-                    }}
-                  />
-                )}
-                <div className="flex-1 min-w-0">
-                  {preview.siteName && (
-                    <p className="text-xs text-zinc-500 mb-0.5 truncate">{preview.siteName}</p>
-                  )}
-                  {preview.title && (
-                    <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{preview.title}</p>
-                  )}
-                  {preview.description && (
-                    <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 line-clamp-2">{preview.description}</p>
-                  )}
-                </div>
-              </div>
-            ) : null}
-          </div>
-        )}
-
-        {/* Title field */}
-        <div>
-          <label className={labelClass}>Title</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Page title"
-            required
-            className={inputClass}
-          />
-        </div>
-
-        {/* Summary / Notes */}
-        <div>
-          <label className={labelClass}>
-            Notes <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
-          </label>
-          <textarea
-            value={summary}
-            onChange={(e) => setSummary(e.target.value)}
-            placeholder="Your notes or auto-filled description…"
-            rows={2}
-            className={`${inputClass} resize-none`}
-          />
-        </div>
-
-        {/* Category */}
-        <div>
-          <label className={labelClass}>Category</label>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className={inputClass}
-          >
-            <option value="">Uncategorized</option>
-            {categories.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.emoji ? `${c.emoji} ` : ""}
-                {c.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Image URL */}
-        <div>
-          <label className={labelClass}>
-            Image <span className="text-zinc-400 dark:text-zinc-500">(auto-filled from link)</span>
-          </label>
-          <input
-            type="url"
-            value={metaImage}
-            onChange={(e) => setMetaImage(e.target.value)}
-            placeholder="Image URL (auto-filled from link)"
-            className={inputClass}
-          />
-        </div>
-
-        {/* AI enhance toggle */}
-        {!isEdit && (
-          <label className="flex items-center gap-3 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] px-3 py-2.5 cursor-pointer hover:bg-zinc-100 dark:hover:bg-white/[0.04]">
+    <>
+      <Modal open={open} onClose={onClose} title={isEdit ? "Edit link" : "Save link"}>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className={labelClass}>URL</label>
             <input
-              type="checkbox"
-              checked={aiSummarize}
-              onChange={(e) => setAiSummarize(e.target.checked)}
-              className="h-4 w-4 rounded border-zinc-300 dark:border-white/20 bg-transparent accent-indigo-500"
+              type="url"
+              value={url}
+              onChange={(e) => handleUrlChange(e.target.value)}
+              onBlur={handleUrlBlur}
+              placeholder="https://…"
+              required
+              className={inputClass}
+              autoFocus
             />
-            <Sparkles className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
-            <div>
-              <span className="text-sm text-zinc-800 dark:text-zinc-200">Enhance with AI</span>
-              <p className="text-xs text-zinc-500">
-                Append an AI summary to your notes
-              </p>
+          </div>
+
+          {!isEdit && (loadingPreview || preview) && (
+            <div className="rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02] overflow-hidden">
+              {loadingPreview ? (
+                <div className="flex items-center gap-2 px-4 py-3 text-sm text-zinc-500">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Fetching preview…
+                </div>
+              ) : preview?.image || preview?.title || preview?.description ? (
+                <div className="flex gap-3 p-3">
+                  {preview.image && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={preview.image}
+                      alt=""
+                      className="h-16 w-16 flex-shrink-0 rounded-lg object-cover border border-zinc-200 dark:border-white/10 bg-zinc-100 dark:bg-white/[0.03]"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    {preview.siteName && (
+                      <p className="text-xs text-zinc-500 mb-0.5 truncate">{preview.siteName}</p>
+                    )}
+                    {preview.title && (
+                      <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200 truncate">{preview.title}</p>
+                    )}
+                    {preview.description && (
+                      <p className="text-xs text-zinc-600 dark:text-zinc-400 mt-0.5 line-clamp-2">{preview.description}</p>
+                    )}
+                  </div>
+                </div>
+              ) : null}
             </div>
-          </label>
-        )}
+          )}
 
-        {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+          <div>
+            <label className={labelClass}>Title</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Page title"
+              required
+              className={inputClass}
+            />
+          </div>
 
-        <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={submitting}
-            className="rounded-lg px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-50"
-          >
-            {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isEdit ? "Save changes" : "Save link"}
-          </button>
-        </div>
-      </form>
-    </Modal>
+          <div>
+            <label className={labelClass}>
+              Notes <span className="text-zinc-400 dark:text-zinc-500">(optional)</span>
+            </label>
+            <textarea
+              value={summary}
+              onChange={(e) => setSummary(e.target.value)}
+              placeholder="Auto-filled from page description…"
+              rows={3}
+              className={`${inputClass} resize-none`}
+            />
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between mb-1">
+              <label className={labelClass}>Category</label>
+              <button
+                type="button"
+                onClick={() => setAddCategoryOpen(true)}
+                className="inline-flex items-center gap-1 text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-500 dark:hover:text-indigo-300"
+              >
+                <FolderPlus className="h-3.5 w-3.5" />
+                New category
+              </button>
+            </div>
+            <select
+              value={categoryId}
+              onChange={(e) => setCategoryId(e.target.value)}
+              className={inputClass}
+            >
+              <option value="">Uncategorized</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.emoji ? `${c.emoji} ` : ""}
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {error && <p className="text-sm text-red-500 dark:text-red-400">{error}</p>}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className="rounded-lg px-4 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-50"
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isEdit ? "Save changes" : "Save link"}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <AddCategoryModal
+        open={addCategoryOpen}
+        onClose={() => setAddCategoryOpen(false)}
+        categories={categories}
+        onSaved={handleCategoryCreated}
+      />
+    </>
   );
 }

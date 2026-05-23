@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Loader2, FolderPlus, Bookmark } from "lucide-react";
+import { Loader2, Bookmark, Menu } from "lucide-react";
 import { SearchBar } from "./components/SearchBar";
-import { CategoryFilter } from "./components/CategoryFilter";
+import { CategoryDropdown } from "./components/CategoryDropdown";
 import { CategoryGroup } from "./components/CategoryGroup";
 import { LinkCard } from "./components/LinkCard";
 import { SaveLinkModal } from "./components/SaveLinkModal";
 import { AddCategoryModal } from "./components/AddCategoryModal";
 import { FloatingActionButton } from "./components/FloatingActionButton";
+import { Sidebar } from "./components/Sidebar";
 import type { Category, CategoryNode, Link } from "./components/types";
 
 export default function Home() {
@@ -20,6 +21,7 @@ export default function Home() {
   const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [prefillUrl, setPrefillUrl] = useState("");
   const [prefillTitle, setPrefillTitle] = useState("");
   const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -144,7 +146,14 @@ export default function Home() {
     <div className="min-h-full bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100">
       <header className="border-b border-zinc-200 dark:border-white/10 bg-white/80 dark:bg-zinc-950/80 backdrop-blur sticky top-0 z-30">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="rounded-lg p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
+              aria-label="Open sidebar"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
             <Image
               src="/logo-banner-light.png"
               alt="LinkVault"
@@ -162,22 +171,6 @@ export default function Home() {
               className="h-12 w-auto hidden dark:block"
             />
           </div>
-          <div className="flex items-center gap-2">
-            <a
-              href="/bookmarklet"
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-            >
-              <Bookmark className="h-4 w-4" />
-              <span className="hidden sm:inline">Bookmarklet</span>
-            </a>
-            <button
-              onClick={() => setCategoryModalOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] px-3 py-2 text-sm text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06]"
-            >
-              <FolderPlus className="h-4 w-4" />
-              <span className="hidden sm:inline">New category</span>
-            </button>
-          </div>
         </div>
       </header>
 
@@ -185,7 +178,7 @@ export default function Home() {
         <SearchBar value={search} onChange={setSearch} />
 
         {categories.length > 0 && (
-          <CategoryFilter
+          <CategoryDropdown
             categories={categories}
             activeId={activeCategoryId}
             onSelect={setActiveCategoryId}
@@ -247,6 +240,12 @@ export default function Home() {
 
       <FloatingActionButton onClick={openNewLink} />
 
+      <Sidebar
+        open={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+        onNewCategory={() => setCategoryModalOpen(true)}
+      />
+
       <SaveLinkModal
         open={saveModalOpen}
         onClose={() => {
@@ -258,6 +257,7 @@ export default function Home() {
         initialTitle={prefillTitle}
         editLink={editingLink ?? undefined}
         onSaved={handleLinkSaved}
+        onCategoryCreated={handleCategorySaved}
       />
 
       <AddCategoryModal
