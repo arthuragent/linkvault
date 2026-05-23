@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, ArrowRight, ClipboardPaste } from "lucide-react";
 import { isValidUrl } from "@/lib/utils";
 import type { Link } from "./types";
 
@@ -15,6 +15,7 @@ export function QuickAddOverlay({ open, onClose, onSaved }: Props) {
   const [url, setUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pasteAvailable, setPasteAvailable] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -37,8 +38,26 @@ export function QuickAddOverlay({ open, onClose, onSaved }: Props) {
       setUrl("");
       setError(null);
       setSaving(false);
+      return;
     }
+    // Only expose the paste shortcut if the clipboard API is available.
+    setPasteAvailable(
+      typeof navigator !== "undefined" &&
+        typeof navigator.clipboard?.readText === "function",
+    );
   }, [open]);
+
+  async function handlePaste() {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setUrl(text.trim());
+        inputRef.current?.focus();
+      }
+    } catch {
+      setError("Clipboard access denied — paste with Ctrl/Cmd+V");
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -101,15 +120,24 @@ export function QuickAddOverlay({ open, onClose, onSaved }: Props) {
       onClick={onClose}
       aria-hidden={!open}
     >
-      <div
-        className="absolute inset-0 bg-zinc-900/30 dark:bg-black/50 backdrop-blur-sm"
-      />
+      <div className="absolute inset-0 bg-zinc-900/30 dark:bg-black/50 backdrop-blur-sm" />
       <form
         onSubmit={handleSubmit}
         onClick={(e) => e.stopPropagation()}
         className="relative w-full max-w-2xl"
       >
-        <div className="flex items-stretch overflow-hidden rounded-full border border-zinc-300/60 dark:border-white/15 bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl shadow-2xl">
+        <div className="group flex items-stretch overflow-hidden rounded-full border border-zinc-300/60 dark:border-white/15 bg-white/80 dark:bg-zinc-900/60 backdrop-blur-xl shadow-2xl">
+          {pasteAvailable && (
+            <button
+              type="button"
+              onClick={handlePaste}
+              disabled={saving}
+              aria-label="Paste from clipboard"
+              className="flex shrink-0 items-center justify-center pl-5 pr-2 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition-colors disabled:opacity-50"
+            >
+              <ClipboardPaste className="h-5 w-5" />
+            </button>
+          )}
           <input
             ref={inputRef}
             type="url"
@@ -117,20 +145,23 @@ export function QuickAddOverlay({ open, onClose, onSaved }: Props) {
             onChange={(e) => setUrl(e.target.value)}
             placeholder="Paste a link to save…"
             disabled={saving}
-            className="flex-1 bg-transparent px-6 py-4 text-base text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 outline-none disabled:opacity-50"
+            className={`flex-1 bg-transparent ${
+              pasteAvailable ? "pl-2 pr-6" : "px-6"
+            } py-4 text-base text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-500 outline-none disabled:opacity-50`}
           />
           <div className="w-px self-stretch bg-zinc-300/70 dark:bg-white/15" />
           <button
             type="submit"
             disabled={saving || !url.trim()}
-            className="flex items-center gap-2 px-5 sm:px-6 text-sm font-medium text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100/60 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="Save link"
+            className="group/save flex items-center gap-2 px-5 sm:px-6 text-sm font-medium text-zinc-800 dark:text-zinc-100 hover:bg-zinc-100/60 dark:hover:bg-white/10 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
+            <span className="hidden sm:inline">Save</span>
             {saving ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              <Plus className="h-5 w-5" />
+              <ArrowRight className="h-5 w-5 lv-arrow-nudge transition-transform duration-200 group-hover/save:translate-x-1.5" />
             )}
-            <span className="hidden sm:inline">Save</span>
           </button>
         </div>
         {error && (
