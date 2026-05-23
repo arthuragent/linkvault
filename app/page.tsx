@@ -1,65 +1,254 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
+import { Loader2, FolderPlus, Bookmark } from "lucide-react";
+import { SearchBar } from "./components/SearchBar";
+import { CategoryFilter } from "./components/CategoryFilter";
+import { CategoryGroup } from "./components/CategoryGroup";
+import { LinkCard } from "./components/LinkCard";
+import { SaveLinkModal } from "./components/SaveLinkModal";
+import { AddCategoryModal } from "./components/AddCategoryModal";
+import { FloatingActionButton } from "./components/FloatingActionButton";
+import type { Category, CategoryNode, Link } from "./components/types";
 
 export default function Home() {
+  const [links, setLinks] = useState<Link[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [prefillUrl, setPrefillUrl] = useState("");
+  const [prefillTitle, setPrefillTitle] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const url = params.get("url");
+    const title = params.get("title");
+    if (url) {
+      setPrefillUrl(url);
+      setPrefillTitle(title ?? "");
+      setSaveModalOpen(true);
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    void refresh();
+  }, []);
+
+  async function refresh() {
+    setLoading(true);
+    try {
+      const [linksRes, catsRes] = await Promise.all([
+        fetch("/api/links"),
+        fetch("/api/categories"),
+      ]);
+      const linksData = await linksRes.json();
+      const catsData = await catsRes.json();
+      setLinks(linksData.links ?? []);
+      setCategories(catsData.categories ?? []);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const categoriesById = useMemo(
+    () => new Map(categories.map((c) => [c.id, c])),
+    [categories],
+  );
+
+  const filteredLinks = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return links.filter((link) => {
+      if (activeCategoryId && link.categoryId !== activeCategoryId) {
+        return false;
+      }
+      if (!q) return true;
+      return (
+        link.title.toLowerCase().includes(q) ||
+        link.url.toLowerCase().includes(q) ||
+        (link.summary ?? "").toLowerCase().includes(q)
+      );
+    });
+  }, [links, search, activeCategoryId]);
+
+  const tree = useMemo<CategoryNode[]>(() => {
+    const nodes = new Map<string, CategoryNode>();
+    for (const c of categories) {
+      nodes.set(c.id, { ...c, children: [], links: [] });
+    }
+    for (const link of filteredLinks) {
+      if (link.categoryId && nodes.has(link.categoryId)) {
+        nodes.get(link.categoryId)!.links.push(link);
+      }
+    }
+    const roots: CategoryNode[] = [];
+    for (const node of nodes.values()) {
+      if (node.parentId && nodes.has(node.parentId)) {
+        nodes.get(node.parentId)!.children.push(node);
+      } else {
+        roots.push(node);
+      }
+    }
+    return roots;
+  }, [categories, filteredLinks]);
+
+  const uncategorizedLinks = filteredLinks.filter((l) => !l.categoryId);
+
+  async function handleDeleteLink(id: string) {
+    setLinks((prev) => prev.filter((l) => l.id !== id));
+    await fetch(`/api/links/${id}`, { method: "DELETE" });
+  }
+
+  async function handleDeleteCategory(id: string) {
+    setCategories((prev) => prev.filter((c) => c.id !== id));
+    setLinks((prev) =>
+      prev.map((l) => (l.categoryId === id ? { ...l, categoryId: null } : l)),
+    );
+    await fetch(`/api/categories/${id}`, { method: "DELETE" });
+  }
+
+  function handleLinkSaved(link: Link) {
+    setLinks((prev) => [link, ...prev]);
+  }
+
+  function handleCategorySaved(cat: Category) {
+    setCategories((prev) => [...prev, cat]);
+  }
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
+    <div className="min-h-full bg-zinc-950 text-zinc-100">
+      <header className="border-b border-white/10 bg-zinc-950/80 backdrop-blur sticky top-0 z-30">
+        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
+          <div className="flex items-center gap-3">
             <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
+              src="/logo-banner.png"
+              alt="LinkVault"
+              width={180}
+              height={48}
+              priority
+              className="h-10 w-auto"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+          </div>
+          <div className="flex items-center gap-2">
+            <a
+              href="/bookmarklet"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06]"
+            >
+              <Bookmark className="h-4 w-4" />
+              <span className="hidden sm:inline">Bookmarklet</span>
+            </a>
+            <button
+              onClick={() => setCategoryModalOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-sm text-zinc-300 hover:bg-white/[0.06]"
+            >
+              <FolderPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">New category</span>
+            </button>
+          </div>
         </div>
+      </header>
+
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">
+        <SearchBar value={search} onChange={setSearch} />
+
+        {categories.length > 0 && (
+          <CategoryFilter
+            categories={categories}
+            activeId={activeCategoryId}
+            onSelect={setActiveCategoryId}
+          />
+        )}
+
+        {loading ? (
+          <div className="flex items-center justify-center py-24 text-zinc-500">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <>
+            {links.length === 0 ? (
+              <EmptyState onAdd={() => setSaveModalOpen(true)} />
+            ) : (
+              <div className="space-y-4">
+                {tree.map((node) => (
+                  <CategoryGroup
+                    key={node.id}
+                    node={node}
+                    categoriesById={categoriesById}
+                    onDeleteLink={handleDeleteLink}
+                    onDeleteCategory={handleDeleteCategory}
+                  />
+                ))}
+                {uncategorizedLinks.length > 0 && (
+                  <section className="rounded-2xl border border-white/10 bg-white/[0.02]">
+                    <header className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-700 px-3 py-1 text-sm font-semibold text-zinc-100">
+                        Uncategorized
+                      </span>
+                      <span className="ml-2 text-xs text-zinc-500">
+                        {uncategorizedLinks.length}
+                      </span>
+                    </header>
+                    <div className="space-y-3 px-4 pb-4">
+                      {uncategorizedLinks.map((link) => (
+                        <LinkCard
+                          key={link.id}
+                          link={link}
+                          onDelete={handleDeleteLink}
+                        />
+                      ))}
+                    </div>
+                  </section>
+                )}
+                {filteredLinks.length === 0 && (
+                  <div className="rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-zinc-500">
+                    No links match your search.
+                  </div>
+                )}
+              </div>
+            )}
+          </>
+        )}
       </main>
+
+      <FloatingActionButton onClick={() => setSaveModalOpen(true)} />
+
+      <SaveLinkModal
+        open={saveModalOpen}
+        onClose={() => setSaveModalOpen(false)}
+        categories={categories}
+        initialUrl={prefillUrl}
+        initialTitle={prefillTitle}
+        onSaved={handleLinkSaved}
+      />
+
+      <AddCategoryModal
+        open={categoryModalOpen}
+        onClose={() => setCategoryModalOpen(false)}
+        categories={categories}
+        onSaved={handleCategorySaved}
+      />
+    </div>
+  );
+}
+
+function EmptyState({ onAdd }: { onAdd: () => void }) {
+  return (
+    <div className="rounded-2xl border border-dashed border-white/10 p-12 text-center">
+      <Bookmark className="mx-auto h-10 w-10 text-zinc-600" />
+      <h2 className="mt-4 text-lg font-medium text-zinc-200">No links yet</h2>
+      <p className="mt-1 text-sm text-zinc-500">
+        Save your first link to get started.
+      </p>
+      <button
+        onClick={onAdd}
+        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400"
+      >
+        Save a link
+      </button>
     </div>
   );
 }
