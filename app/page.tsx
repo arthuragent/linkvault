@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Loader2, Bookmark, Menu } from "lucide-react";
+import { Loader2, Bookmark, Menu, ChevronDown, ChevronRight } from "lucide-react";
 import { SearchBar } from "./components/SearchBar";
 import { QuickAddBar } from "./components/QuickAddBar";
 import { CategoryDropdown } from "./components/CategoryDropdown";
@@ -10,7 +10,6 @@ import { CategoryGroup } from "./components/CategoryGroup";
 import { LinkCard } from "./components/LinkCard";
 import { SaveLinkModal } from "./components/SaveLinkModal";
 import { AddCategoryModal } from "./components/AddCategoryModal";
-import { FloatingActionButton } from "./components/FloatingActionButton";
 import { Sidebar } from "./components/Sidebar";
 import type { Category, CategoryNode, Link } from "./components/types";
 
@@ -23,6 +22,7 @@ export default function Home() {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [uncategorizedOpen, setUncategorizedOpen] = useState(true);
   const [prefillUrl, setPrefillUrl] = useState("");
   const [prefillTitle, setPrefillTitle] = useState("");
   const [editingLink, setEditingLink] = useState<Link | null>(null);
@@ -222,26 +222,36 @@ export default function Home() {
                 ))}
                 {uncategorizedLinks.length > 0 && (
                   <section className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.02]">
-                    <header className="px-4 py-3">
+                    <button
+                      onClick={() => setUncategorizedOpen((v) => !v)}
+                      className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                    >
+                      {uncategorizedOpen ? (
+                        <ChevronDown className="h-4 w-4 text-zinc-500" />
+                      ) : (
+                        <ChevronRight className="h-4 w-4 text-zinc-500" />
+                      )}
                       <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-300 dark:bg-zinc-700 px-3 py-1 text-sm font-semibold text-zinc-900 dark:text-zinc-100">
                         Uncategorized
                       </span>
-                      <span className="ml-2 text-xs text-zinc-500">
+                      <span className="text-xs text-zinc-500">
                         {uncategorizedLinks.length}
                       </span>
-                    </header>
-                    <div className="space-y-3 px-4 pb-4">
-                      {uncategorizedLinks.map((link) => (
-                        <LinkCard
-                          key={link.id}
-                          link={link}
-                          categories={categories}
-                          onDelete={handleDeleteLink}
-                          onEdit={handleEditLink}
-                          onMove={handleMoveLink}
-                        />
-                      ))}
-                    </div>
+                    </button>
+                    {uncategorizedOpen && (
+                      <div className="space-y-3 px-4 pb-4">
+                        {uncategorizedLinks.map((link) => (
+                          <LinkCard
+                            key={link.id}
+                            link={link}
+                            categories={categories}
+                            onDelete={handleDeleteLink}
+                            onEdit={handleEditLink}
+                            onMove={handleMoveLink}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </section>
                 )}
                 {filteredLinks.length === 0 && (
@@ -254,8 +264,6 @@ export default function Home() {
           </>
         )}
       </main>
-
-      <FloatingActionButton onClick={openNewLink} />
 
       <Sidebar
         open={sidebarOpen}
