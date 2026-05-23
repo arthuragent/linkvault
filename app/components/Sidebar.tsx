@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import Link from "next/link";
 import { X, Bookmark, FolderPlus } from "lucide-react";
 import { ThemeSwitcher } from "./ThemeSwitcher";
+import { useModalBackButton } from "./useModalBackButton";
 
 type Props = {
   open: boolean;
@@ -12,6 +13,8 @@ type Props = {
 };
 
 export function Sidebar({ open, onClose, onNewCategory }: Props) {
+  useModalBackButton(open, onClose);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {

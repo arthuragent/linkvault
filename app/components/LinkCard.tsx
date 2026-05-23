@@ -12,6 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
+import { useModalBackButton } from "./useModalBackButton";
 import type { Category, Link } from "./types";
 
 type Props = {
@@ -258,6 +259,8 @@ function LinkActionsMenu({
   onRefresh,
 }: MenuProps) {
   const [view, setView] = useState<"actions" | "move">("actions");
+
+  useModalBackButton(true, onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

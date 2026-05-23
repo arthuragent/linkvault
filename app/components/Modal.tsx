@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { X } from "lucide-react";
+import { useModalBackButton } from "./useModalBackButton";
 
 type Props = {
   open: boolean;
@@ -11,6 +12,8 @@ type Props = {
 };
 
 export function Modal({ open, onClose, title, children }: Props) {
+  useModalBackButton(open, onClose);
+
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {

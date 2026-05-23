@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
-import { Loader2, Bookmark, Menu, ChevronDown, ChevronRight, Plus } from "lucide-react";
+import {
+  Loader2,
+  Bookmark,
+  Menu,
+  ChevronDown,
+  ChevronRight,
+  Plus,
+  ChevronsDownUp,
+  ChevronsUpDown,
+} from "lucide-react";
 import { SearchBar } from "./components/SearchBar";
 import { QuickAddOverlay } from "./components/QuickAddOverlay";
 import { CategoryDropdown } from "./components/CategoryDropdown";
@@ -79,6 +88,20 @@ export default function Home() {
       else next.add(id);
       return next;
     });
+  }
+
+  function toggleCollapseAll() {
+    // If anything is currently expanded, collapse everything; otherwise expand.
+    const anyExpanded =
+      uncategorizedOpen ||
+      categories.some((c) => !collapsedCategoryIds.has(c.id));
+    if (anyExpanded) {
+      setCollapsedCategoryIds(new Set(categories.map((c) => c.id)));
+      setUncategorizedOpen(false);
+    } else {
+      setCollapsedCategoryIds(new Set());
+      setUncategorizedOpen(true);
+    }
   }
 
   // Load persisted UI state once on mount.
@@ -294,11 +317,32 @@ export default function Home() {
         <SearchBar value={search} onChange={setSearch} />
 
         {categories.length > 0 && (
-          <CategoryDropdown
-            categories={categories}
-            activeId={activeCategoryId}
-            onSelect={setActiveCategoryId}
-          />
+          <div className="flex items-center gap-2">
+            <div className="flex-1">
+              <CategoryDropdown
+                categories={categories}
+                activeId={activeCategoryId}
+                onSelect={setActiveCategoryId}
+              />
+            </div>
+            {(() => {
+              const anyExpanded =
+                uncategorizedOpen ||
+                categories.some((c) => !collapsedCategoryIds.has(c.id));
+              const Icon = anyExpanded ? ChevronsDownUp : ChevronsUpDown;
+              return (
+                <button
+                  type="button"
+                  onClick={toggleCollapseAll}
+                  aria-label={anyExpanded ? "Collapse all" : "Expand all"}
+                  title={anyExpanded ? "Collapse all" : "Expand all"}
+                  className="shrink-0 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] p-2 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/[0.06] transition-colors"
+                >
+                  <Icon className="h-5 w-5" />
+                </button>
+              );
+            })()}
+          </div>
         )}
 
         {loading ? (

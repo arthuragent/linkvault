@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Loader2, ArrowRight, ClipboardPaste } from "lucide-react";
 import { isValidUrl } from "@/lib/utils";
+import { useModalBackButton } from "./useModalBackButton";
 import type { Link } from "./types";
 
 type Props = {
@@ -17,6 +18,8 @@ export function QuickAddOverlay({ open, onClose, onSaved }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pasteAvailable, setPasteAvailable] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useModalBackButton(open, onClose);
 
   useEffect(() => {
     if (!open) return;
