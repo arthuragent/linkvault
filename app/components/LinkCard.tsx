@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Trash2, Pencil, Share2, Check } from "lucide-react";
+import { Trash2, Pencil, Share2, Check } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
 import type { Category, Link } from "./types";
 
@@ -130,45 +130,17 @@ export function LinkCard({ link, category, onDelete, onEdit }: Props) {
         )}
 
         <div className="p-4">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-2 min-w-0">
-              {category && (
-                <span
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0"
-                  style={{ backgroundColor: color, color: textOnColor }}
-                >
-                  {category.emoji && <span>{category.emoji}</span>}
-                  {category.name}
-                </span>
-              )}
-              <span className="text-xs text-zinc-500 truncate">{domain}</span>
-            </div>
-
-            <div className="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-              <a
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="rounded-lg p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
-                aria-label="Open link"
+          <div className="flex items-center gap-2 min-w-0 mb-2">
+            {category && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0"
+                style={{ backgroundColor: color, color: textOnColor }}
               >
-                <ExternalLink className="h-4 w-4" />
-              </a>
-              <button
-                onClick={() => onEdit(link)}
-                className="rounded-lg p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
-                aria-label="Edit link"
-              >
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => onDelete(link.id)}
-                className="rounded-lg p-1.5 text-zinc-500 dark:text-zinc-400 hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400"
-                aria-label="Delete link"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
+                {category.emoji && <span>{category.emoji}</span>}
+                {category.name}
+              </span>
+            )}
+            <span className="text-xs text-zinc-500 truncate">{domain}</span>
           </div>
 
           <a
