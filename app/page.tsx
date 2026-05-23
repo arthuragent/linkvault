@@ -175,8 +175,12 @@ export default function Home() {
         roots.push(node);
       }
     }
+    if (activeCategoryId && nodes.has(activeCategoryId)) {
+      // When filtering, show only the selected category (and its descendants).
+      return [nodes.get(activeCategoryId)!];
+    }
     return roots;
-  }, [categories, filteredLinks]);
+  }, [categories, filteredLinks, activeCategoryId]);
 
   const uncategorizedLinks = filteredLinks.filter((l) => !l.categoryId);
 
