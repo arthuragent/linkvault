@@ -12,6 +12,7 @@ type Props = {
   categories: Category[];
   initialUrl?: string;
   initialTitle?: string;
+  editLink?: Link;
   onSaved: (link: Link) => void;
 };
 
@@ -21,24 +22,35 @@ export function SaveLinkModal({
   categories,
   initialUrl = "",
   initialTitle = "",
+  editLink,
   onSaved,
 }: Props) {
+  const isEdit = Boolean(editLink);
   const [url, setUrl] = useState(initialUrl);
   const [title, setTitle] = useState(initialTitle);
   const [categoryId, setCategoryId] = useState<string>("");
+  const [metaImage, setMetaImage] = useState<string>("");
   const [aiSummarize, setAiSummarize] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (open) {
-      setUrl(initialUrl);
-      setTitle(initialTitle);
-      setCategoryId("");
+      if (editLink) {
+        setUrl(editLink.url);
+        setTitle(editLink.title);
+        setCategoryId(editLink.categoryId ?? "");
+        setMetaImage(editLink.metaImage ?? "");
+      } else {
+        setUrl(initialUrl);
+        setTitle(initialTitle);
+        setCategoryId("");
+        setMetaImage("");
+      }
       setAiSummarize(false);
       setError(null);
     }
-  }, [open, initialUrl, initialTitle]);
+  }, [open, initialUrl, initialTitle, editLink]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +66,8 @@ export function SaveLinkModal({
 
     setSubmitting(true);
     try {
-      let summary: string | null = null;
-      if (aiSummarize) {
+      let summary: string | null = editLink?.summary ?? null;
+      if (!isEdit && aiSummarize) {
         try {
           const res = await fetch("/api/summarize", {
             method: "POST",
@@ -71,16 +83,22 @@ export function SaveLinkModal({
         }
       }
 
-      const res = await fetch("/api/links", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          url,
-          title,
-          summary,
-          categoryId: categoryId || null,
-        }),
-      });
+      const payload = {
+        url,
+        title,
+        summary,
+        metaImage: metaImage.trim() ? metaImage.trim() : null,
+        categoryId: categoryId || null,
+      };
+
+      const res = await fetch(
+        isEdit ? `/api/links/${editLink!.id}` : "/api/links",
+        {
+          method: isEdit ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
+      );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         throw new Error(data.error ?? "Failed to save link");
@@ -96,7 +114,7 @@ export function SaveLinkModal({
   };
 
   return (
-    <Modal open={open} onClose={onClose} title="Save link">
+    <Modal open={open} onClose={onClose} title={isEdit ? "Edit link" : "Save link"}>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-zinc-300 mb-1">
@@ -146,16 +164,31 @@ export function SaveLinkModal({
           </select>
         </div>
 
-        <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer hover:bg-white/[0.04]">
+        <div>
+          <label className="block text-sm font-medium text-zinc-300 mb-1">
+            OG image <span className="text-zinc-500">(optional)</span>
+          </label>
           <input
-            type="checkbox"
-            checked={aiSummarize}
-            onChange={(e) => setAiSummarize(e.target.checked)}
-            className="h-4 w-4 rounded border-white/20 bg-transparent accent-indigo-500"
+            type="url"
+            value={metaImage}
+            onChange={(e) => setMetaImage(e.target.value)}
+            placeholder="OG Image URL (optional)"
+            className="w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-zinc-100 placeholder:text-zinc-500 outline-none focus:border-indigo-500/60"
           />
-          <Sparkles className="h-4 w-4 text-indigo-400" />
-          <span className="text-sm text-zinc-200">Generate AI summary</span>
-        </label>
+        </div>
+
+        {!isEdit && (
+          <label className="flex items-center gap-3 rounded-lg border border-white/10 bg-white/[0.02] px-3 py-2.5 cursor-pointer hover:bg-white/[0.04]">
+            <input
+              type="checkbox"
+              checked={aiSummarize}
+              onChange={(e) => setAiSummarize(e.target.checked)}
+              className="h-4 w-4 rounded border-white/20 bg-transparent accent-indigo-500"
+            />
+            <Sparkles className="h-4 w-4 text-indigo-400" />
+            <span className="text-sm text-zinc-200">Generate AI summary</span>
+          </label>
+        )}
 
         {error && (
           <p className="text-sm text-red-400">{error}</p>
@@ -176,7 +209,7 @@ export function SaveLinkModal({
             className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-400 disabled:opacity-50"
           >
             {submitting && <Loader2 className="h-4 w-4 animate-spin" />}
-            Save link
+            {isEdit ? "Save changes" : "Save link"}
           </button>
         </div>
       </form>

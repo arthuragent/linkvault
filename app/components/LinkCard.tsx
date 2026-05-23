@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Trash2 } from "lucide-react";
+import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
 import type { Category, Link } from "./types";
 
@@ -8,15 +8,27 @@ type Props = {
   link: Link;
   category?: Category;
   onDelete: (id: string) => void;
+  onEdit: (link: Link) => void;
 };
 
-export function LinkCard({ link, category, onDelete }: Props) {
+export function LinkCard({ link, category, onDelete, onEdit }: Props) {
   const color = category?.color ?? "#6366f1";
   const textOnColor = isLightColor(color) ? "#0a0a0a" : "#ffffff";
 
   return (
     <div className="group rounded-2xl border border-white/10 bg-white/[0.03] p-4 transition-all hover:border-white/30 hover:bg-white/[0.06]">
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start gap-3">
+        {link.metaImage && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={link.metaImage}
+            alt=""
+            className="h-16 w-16 flex-shrink-0 rounded-lg object-cover border border-white/10 bg-white/[0.03]"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
+          />
+        )}
         <a
           href={link.url}
           target="_blank"
@@ -56,6 +68,13 @@ export function LinkCard({ link, category, onDelete }: Props) {
           >
             <ExternalLink className="h-4 w-4" />
           </a>
+          <button
+            onClick={() => onEdit(link)}
+            className="rounded-lg p-1.5 text-zinc-400 hover:bg-white/10 hover:text-zinc-100"
+            aria-label="Edit link"
+          >
+            <Pencil className="h-4 w-4" />
+          </button>
           <button
             onClick={() => onDelete(link.id)}
             className="rounded-lg p-1.5 text-zinc-400 hover:bg-red-500/20 hover:text-red-400"

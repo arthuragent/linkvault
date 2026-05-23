@@ -22,7 +22,7 @@ const PRESET_EMOJIS = ["📚", "💼", "🎬", "🎵", "🎮", "🛠️", "🍳"
 
 export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) {
   const [name, setName] = useState("");
-  const [color, setColor] = useState<string>(PRESET_COLORS[7]);
+  const [color, setColor] = useState<string>(PRESET_COLORS[0]);
   const [emoji, setEmoji] = useState<string>("");
   const [parentId, setParentId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
@@ -31,7 +31,7 @@ export function AddCategoryModal({ open, onClose, categories, onSaved }: Props) 
   useEffect(() => {
     if (open) {
       setName("");
-      setColor(PRESET_COLORS[7]);
+      setColor(PRESET_COLORS[Math.floor(Math.random() * PRESET_COLORS.length)]);
       setEmoji("");
       setParentId("");
       setError(null);

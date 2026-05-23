@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
 import { LinkCard } from "./LinkCard";
 import { isLightColor } from "@/lib/utils";
-import type { Category, CategoryNode } from "./types";
+import type { Category, CategoryNode, Link } from "./types";
 
 type Props = {
   node: CategoryNode;
@@ -12,6 +12,7 @@ type Props = {
   depth?: number;
   onDeleteLink: (id: string) => void;
   onDeleteCategory: (id: string) => void;
+  onEditLink: (link: Link) => void;
 };
 
 export function CategoryGroup({
@@ -20,6 +21,7 @@ export function CategoryGroup({
   depth = 0,
   onDeleteLink,
   onDeleteCategory,
+  onEditLink,
 }: Props) {
   const [open, setOpen] = useState(true);
   const total =
@@ -77,6 +79,7 @@ export function CategoryGroup({
               link={link}
               category={categoriesById.get(link.categoryId ?? "")}
               onDelete={onDeleteLink}
+              onEdit={onEditLink}
             />
           ))}
           {node.children.map((child) => (
@@ -87,6 +90,7 @@ export function CategoryGroup({
               depth={depth + 1}
               onDeleteLink={onDeleteLink}
               onDeleteCategory={onDeleteCategory}
+              onEditLink={onEditLink}
             />
           ))}
         </div>

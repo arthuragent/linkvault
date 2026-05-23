@@ -13,6 +13,7 @@ export type Link = {
   url: string;
   title: string;
   summary: string | null;
+  metaImage: string | null;
   categoryId: string | null;
   createdAt: string;
 };

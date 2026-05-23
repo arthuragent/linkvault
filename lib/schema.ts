@@ -33,6 +33,7 @@ export const links = pgTable(
     url: text("url").notNull(),
     title: text("title").notNull(),
     summary: text("summary"),
+    metaImage: text("meta_image"),
     categoryId: uuid("category_id").references(() => categories.id, {
       onDelete: "set null",
     }),

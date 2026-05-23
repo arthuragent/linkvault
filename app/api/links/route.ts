@@ -27,6 +27,7 @@ export async function POST(req: Request) {
       url: body.url.trim(),
       title: body.title.trim(),
       summary: typeof body.summary === "string" && body.summary ? body.summary : null,
+      metaImage: typeof body.metaImage === "string" && body.metaImage ? body.metaImage : null,
       categoryId: typeof body.categoryId === "string" && body.categoryId ? body.categoryId : null,
     })
     .returning();

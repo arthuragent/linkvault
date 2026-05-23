@@ -22,6 +22,19 @@ export default function Home() {
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [prefillUrl, setPrefillUrl] = useState("");
   const [prefillTitle, setPrefillTitle] = useState("");
+  const [editingLink, setEditingLink] = useState<Link | null>(null);
+
+  function openNewLink() {
+    setEditingLink(null);
+    setPrefillUrl("");
+    setPrefillTitle("");
+    setSaveModalOpen(true);
+  }
+
+  function handleEditLink(link: Link) {
+    setEditingLink(link);
+    setSaveModalOpen(true);
+  }
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -112,7 +125,15 @@ export default function Home() {
   }
 
   function handleLinkSaved(link: Link) {
-    setLinks((prev) => [link, ...prev]);
+    setLinks((prev) => {
+      const idx = prev.findIndex((l) => l.id === link.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = link;
+        return next;
+      }
+      return [link, ...prev];
+    });
   }
 
   function handleCategorySaved(cat: Category) {
@@ -128,9 +149,9 @@ export default function Home() {
               src="/logo-banner.png"
               alt="LinkVault"
               width={180}
-              height={48}
+              height={101}
               priority
-              className="h-10 w-auto"
+              className="h-12 w-auto"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -170,7 +191,7 @@ export default function Home() {
         ) : (
           <>
             {links.length === 0 ? (
-              <EmptyState onAdd={() => setSaveModalOpen(true)} />
+              <EmptyState onAdd={openNewLink} />
             ) : (
               <div className="space-y-4">
                 {tree.map((node) => (
@@ -180,6 +201,7 @@ export default function Home() {
                     categoriesById={categoriesById}
                     onDeleteLink={handleDeleteLink}
                     onDeleteCategory={handleDeleteCategory}
+                    onEditLink={handleEditLink}
                   />
                 ))}
                 {uncategorizedLinks.length > 0 && (
@@ -198,6 +220,7 @@ export default function Home() {
                           key={link.id}
                           link={link}
                           onDelete={handleDeleteLink}
+                          onEdit={handleEditLink}
                         />
                       ))}
                     </div>
@@ -214,14 +237,18 @@ export default function Home() {
         )}
       </main>
 
-      <FloatingActionButton onClick={() => setSaveModalOpen(true)} />
+      <FloatingActionButton onClick={openNewLink} />
 
       <SaveLinkModal
         open={saveModalOpen}
-        onClose={() => setSaveModalOpen(false)}
+        onClose={() => {
+          setSaveModalOpen(false);
+          setEditingLink(null);
+        }}
         categories={categories}
         initialUrl={prefillUrl}
         initialTitle={prefillTitle}
+        editLink={editingLink ?? undefined}
         onSaved={handleLinkSaved}
       />
 
