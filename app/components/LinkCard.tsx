@@ -137,7 +137,7 @@ export function LinkCard({
   return (
     <>
       <div
-        className="group rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-white/30 hover:bg-zinc-100 dark:hover:bg-white/[0.06] select-none"
+        className="group rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-white/30 hover:bg-zinc-100 dark:hover:bg-white/[0.06] select-none md:flex md:items-stretch"
         style={{ touchAction: "manipulation" }}
         onPointerDown={startLongPress}
         onPointerUp={cancelLongPress}
@@ -152,7 +152,7 @@ export function LinkCard({
             href={link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="block aspect-video w-full bg-zinc-100 dark:bg-white/[0.03]"
+            className="block aspect-video w-full bg-zinc-100 dark:bg-white/[0.03] md:aspect-auto md:h-20 md:w-20 md:flex-shrink-0 md:self-center md:ml-3 md:my-3 md:rounded-lg md:overflow-hidden"
             draggable={false}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -168,7 +168,7 @@ export function LinkCard({
           </a>
         )}
 
-        <div className="p-4">
+        <div className="p-4 md:flex-1 md:min-w-0 md:py-3 md:px-4">
           <div className="flex items-center gap-2 min-w-0 mb-2">
             {category && (
               <span
@@ -189,13 +189,13 @@ export function LinkCard({
             className="block"
             draggable={false}
           >
-            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2 mb-1">
+            <h3 className="font-semibold text-zinc-900 dark:text-zinc-100 leading-snug line-clamp-2 mb-1 md:line-clamp-1">
               {link.title}
             </h3>
           </a>
 
           {link.summary && (
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-3">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-3 md:line-clamp-2">
               {link.summary}
             </p>
           )}
