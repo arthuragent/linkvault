@@ -3,10 +3,11 @@ import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Google from "next-auth/providers/google";
 import { authConfig } from "@/auth.config";
 import { db } from "@/lib/db";
+import * as schema from "@/lib/schema";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: DrizzleAdapter(db),
+  adapter: DrizzleAdapter(db, schema),
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID!,
