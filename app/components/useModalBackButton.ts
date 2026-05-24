@@ -2,47 +2,93 @@
 
 import { useEffect, useRef } from "react";
 
-/**
- * When `open` is true, push a synthetic history entry so the device's
- * back gesture pops it instead of leaving the page. Pop → onClose().
- *
- * When the modal closes by any other means (X button, Escape, action),
- * the cleanup consumes the synthetic entry via history.back() so the
- * back stack stays balanced.
- *
- * Re-render safe: changes to the onClose reference don't re-push.
- */
+// One global stack across all modals on the page. We push a single synthetic
+// history entry whenever at least one modal is open; back pops the entry and
+// closes the topmost modal. When a modal opens on top of another (e.g. Edit
+// from the long-press action menu, or AddCategoryModal stacked on the save
+// modal), we reuse the existing synthetic entry instead of pushing another —
+// otherwise the old modal's cleanup-back() would close the brand-new one.
+
+type ModalEntry = {
+  id: number;
+  close: () => void;
+  closedByPop: { current: boolean };
+};
+
+const stack: ModalEntry[] = [];
+let synthInPlace = false;
+let listenerInstalled = false;
+let nextId = 1;
+
+function installListener() {
+  if (listenerInstalled || typeof window === "undefined") return;
+  listenerInstalled = true;
+  window.addEventListener("popstate", () => {
+    synthInPlace = false;
+    const top = stack.pop();
+    if (!top) return;
+    top.closedByPop.current = true;
+    top.close();
+    // If more modals are still mounted, restore the synthetic entry so the
+    // next back press closes the next-topmost one.
+    if (stack.length > 0) {
+      try {
+        window.history.pushState({ lvModal: "shared" }, "");
+        synthInPlace = true;
+      } catch {
+        // ignore
+      }
+    }
+  });
+}
+
 export function useModalBackButton(open: boolean, onClose: () => void) {
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
 
-  const closingFromPopRef = useRef(false);
-
   useEffect(() => {
-    if (!open) return;
-    if (typeof window === "undefined") return;
+    if (!open || typeof window === "undefined") return;
+    installListener();
 
-    closingFromPopRef.current = false;
-    window.history.pushState({ lvModal: Date.now() }, "");
-
-    const handler = () => {
-      closingFromPopRef.current = true;
-      onCloseRef.current();
+    const id = nextId++;
+    const closedByPop = { current: false };
+    const entry: ModalEntry = {
+      id,
+      close: () => onCloseRef.current(),
+      closedByPop,
     };
-    window.addEventListener("popstate", handler);
+    stack.push(entry);
+
+    if (!synthInPlace) {
+      try {
+        window.history.pushState({ lvModal: id }, "");
+        synthInPlace = true;
+      } catch {
+        // ignore
+      }
+    }
 
     return () => {
-      window.removeEventListener("popstate", handler);
-      if (!closingFromPopRef.current) {
-        try {
-          window.history.back();
-        } catch {
-          // ignore
+      const idx = stack.findIndex((m) => m.id === id);
+      if (idx >= 0) stack.splice(idx, 1);
+
+      if (closedByPop.current) return;
+
+      // Defer to the next microtask so a sibling modal mounting in the same
+      // render commit (the "transition" case) can claim the synthetic entry
+      // before we try to pop it.
+      queueMicrotask(() => {
+        if (stack.length === 0 && synthInPlace) {
+          synthInPlace = false;
+          try {
+            window.history.back();
+          } catch {
+            // ignore
+          }
         }
-      }
-      closingFromPopRef.current = false;
+      });
     };
-    // onClose is captured via ref to avoid re-pushing on every render.
+    // onClose is captured via ref so its identity doesn't re-trigger.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 }
