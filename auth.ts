@@ -7,7 +7,7 @@ import * as schema from "@/lib/schema";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   ...authConfig,
-  adapter: DrizzleAdapter(db, schema),
+  adapter: DrizzleAdapter(db, schema as any),
   providers: [
     Google({
       clientId: process.env.AUTH_GOOGLE_ID!,
