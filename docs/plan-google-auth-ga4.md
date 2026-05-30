@@ -58,29 +58,71 @@ export { GET, POST } from "@/auth"
 
 ## Phase 2 — GA4 Analytics
 
-### 2.1 Create GA4 property via Admin API
-Using gcloud/token:
-```bash
-# Get token
-TOKEN=$(gcloud auth print-access-token)
-# Create property under existing account
-curl -sS -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  'https://analyticsadmin.googleapis.com/v1beta/properties' \
-  -d '{"parent":"accounts/<account-id>","displayName":"LinkVault","timeZone":"UTC","currencyCode":"USD"}'
-```
+### 2.1 Create the Google Analytics assets via Admin API
+The Google Analytics assets for LinkVault are created in Google Analytics, not in the app repo:
 
-### 2.2 Create web stream
-```bash
-curl -sS -X POST \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "Content-Type: application/json" \
-  'https://analyticsadmin.googleapis.com/v1beta/properties/<property-id>/dataStreams' \
-  -d '{"displayName":"LinkVault Web","type":"WEB_DATA_STREAM","webStreamData":{"defaultUri":"https://linkvault-opal.vercel.app"}}'
-```
+- **GA4 property**: `LinkVault`
+- **Web data stream**: `LinkVault Web`
+- **Default URI**: `https://linkvault-opal.vercel.app`
+- **Runtime app env var**: `NEXT_PUBLIC_GA_MEASUREMENT_ID=<web stream measurement ID>`
 
-### 2.3 Add to root layout `app/layout.tsx`
+Implementation path used by Arthur:
+
+1. Authenticate as `arthurzlotagent@gmail.com` with Google Cloud access.
+2. Verify the GCP project context:
+   ```bash
+   GCLOUD="$HOME/.local/google-cloud-sdk/bin/gcloud"
+   "$GCLOUD" auth list --format='value(account,status)'
+   "$GCLOUD" projects describe pzlaw-crm-auth --format='value(projectId,projectNumber)'
+   ```
+3. Enable the Analytics Admin API in the shared auth project:
+   ```bash
+   "$GCLOUD" services enable analyticsadmin.googleapis.com --project pzlaw-crm-auth --quiet
+   ```
+4. Use a Google access token with Analytics Admin scopes:
+   - `https://www.googleapis.com/auth/analytics.edit`
+   - `https://www.googleapis.com/auth/analytics.readonly`
+
+   Important: a plain `gcloud auth print-access-token` token may only have Cloud Platform scopes and can fail with:
+   ```text
+   Request had insufficient authentication scopes.
+   ACCESS_TOKEN_SCOPE_INSUFFICIENT
+   ```
+
+   If that happens, re-authorize ADC with Analytics scopes before calling the Analytics Admin API.
+5. List available Analytics accounts and choose the account that should own LinkVault:
+   ```bash
+   TOKEN=$("$GCLOUD" auth application-default print-access-token)
+   curl -sS \
+     -H "Authorization: Bearer $TOKEN" \
+     'https://analyticsadmin.googleapis.com/v1beta/accounts?pageSize=200'
+   ```
+6. Reuse an existing `LinkVault` GA4 property if present; otherwise create it:
+   ```bash
+   curl -sS -X POST \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     'https://analyticsadmin.googleapis.com/v1beta/properties' \
+     -d '{"parent":"accounts/<account-id>","displayName":"LinkVault","timeZone":"UTC","currencyCode":"USD"}'
+   ```
+7. Reuse an existing `LinkVault Web` data stream if present; otherwise create it:
+   ```bash
+   curl -sS -X POST \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     'https://analyticsadmin.googleapis.com/v1beta/properties/<property-id>/dataStreams' \
+     -d '{"displayName":"LinkVault Web","type":"WEB_DATA_STREAM","webStreamData":{"defaultUri":"https://linkvault-opal.vercel.app"}}'
+   ```
+8. Read the stream's `webStreamData.measurementId` value, then add it to Vercel production:
+   ```bash
+   printf '%s' 'G-XXXXXXXXXX' | npx vercel env add NEXT_PUBLIC_GA_MEASUREMENT_ID production
+   ```
+9. Redeploy production so Next.js receives the new public env var, then verify the live HTML includes the GA script URL:
+   ```bash
+   curl -fsSL https://linkvault-opal.vercel.app/ | grep 'googletagmanager.com/gtag/js?id=G-'
+   ```
+
+### 2.2 Add to root layout `app/layout.tsx`
 ```tsx
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXX" />
 <script dangerouslySetInnerHTML={{ __html: `
@@ -91,7 +133,7 @@ curl -sS -X POST \
 ` }} />
 ```
 
-### 2.4 Track events
+### 2.3 Track events
 - `page_view` — automatic with GA tag
 - `login` with `auth_method: "google"` — in auth callback/sign-in handler
 - `sign_up` with `auth_method: "google"` — on first-time sign-in
