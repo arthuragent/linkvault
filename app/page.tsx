@@ -426,6 +426,7 @@ export default function Home() {
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
         onSaved={handleLinkSaved}
+        categories={categories}
       />
 
       <SaveLinkModal
