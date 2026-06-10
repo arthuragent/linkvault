@@ -157,8 +157,9 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
       }
       const data = await res.json();
       if (saveGeneration !== saveGenerationRef.current) return;
-      onSaved(data.link);
-      setSavedLink(data.link);
+      const uncategorizedLink = { ...data.link, categoryId: null };
+      onSaved(uncategorizedLink);
+      setSavedLink(uncategorizedLink);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save link");
     } finally {
@@ -256,13 +257,13 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
           >
             <div className="space-y-1 text-center">
               <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                Link saved
+                Saved to Uncategorized
               </p>
               <h2 className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
-                Where should it go?
+                Move it to a category?
               </h2>
               <p className="mx-auto max-w-md text-sm text-zinc-600 dark:text-zinc-400">
-                Choose a category now, or skip and keep it uncategorized.
+                The video is already saved in Uncategorized. Choose a category to move it, or skip to leave it there.
               </p>
             </div>
 
@@ -313,7 +314,7 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
                 disabled={assigningCategoryId !== null}
                 className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/10 disabled:opacity-50"
               >
-                Skip for now
+                Leave in Uncategorized
               </button>
             </div>
           </div>
