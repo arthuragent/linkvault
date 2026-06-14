@@ -202,7 +202,7 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 transition-opacity ${
+      className={`fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain px-4 py-6 transition-opacity sm:pt-24 ${
         open ? "opacity-100" : "pointer-events-none opacity-0"
       }`}
       onClick={resetAndClose}
@@ -211,7 +211,7 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
       <div className="absolute inset-0 bg-zinc-900/30 dark:bg-black/50 backdrop-blur-sm" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-2xl"
+        className="relative w-full max-w-2xl pb-[env(safe-area-inset-bottom)]"
       >
         {!savedLink ? (
           <form onSubmit={handleSubmit}>
@@ -253,7 +253,7 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
         ) : (
           <div
             ref={categoryStepRef}
-            className="rounded-3xl border border-zinc-300/60 dark:border-white/15 bg-white/90 dark:bg-zinc-900/90 p-5 shadow-2xl backdrop-blur-xl"
+            className="flex max-h-[calc(100dvh-3rem)] flex-col rounded-3xl border border-zinc-300/60 dark:border-white/15 bg-white/90 dark:bg-zinc-900/90 p-5 shadow-2xl backdrop-blur-xl"
           >
             <div className="space-y-1 text-center">
               <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
@@ -277,7 +277,7 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
             </div>
 
             {suggestedCategories.length > 0 ? (
-              <div className="mt-5 max-h-[min(60vh,24rem)] overflow-y-auto overscroll-contain grid gap-2 sm:grid-cols-2">
+              <div className="mt-5 grid min-h-0 gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2">
                 {suggestedCategories.map((category, index) => (
                   <button
                     key={category.id}
@@ -306,7 +306,7 @@ export function QuickAddOverlay({ open, onClose, onSaved, categories }: Props) {
               </p>
             )}
 
-            <div className="mt-5 flex justify-center">
+            <div className="mt-5 flex shrink-0 justify-center">
               <button
                 type="button"
                 data-quick-add-focus={suggestedCategories.length === 0 ? "" : undefined}
