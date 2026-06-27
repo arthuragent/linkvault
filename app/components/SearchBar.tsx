@@ -1,17 +1,28 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Search, X } from "lucide-react";
 
 type Props = {
   value: string;
   onChange: (v: string) => void;
+  autoFocus?: boolean;
 };
 
-export function SearchBar({ value, onChange }: Props) {
+export function SearchBar({ value, onChange, autoFocus = false }: Props) {
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (!autoFocus) return;
+    const t = setTimeout(() => inputRef.current?.focus(), 50);
+    return () => clearTimeout(t);
+  }, [autoFocus]);
+
   return (
     <div className="relative w-full">
       <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-zinc-500" />
       <input
+        ref={inputRef}
         type="search"
         value={value}
         onChange={(e) => onChange(e.target.value)}

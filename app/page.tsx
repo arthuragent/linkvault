@@ -8,18 +8,21 @@ import {
   Menu,
   ChevronDown,
   ChevronRight,
-  Plus,
+  Search,
+  ArrowRight,
+  ClipboardPaste,
+  Check,
   ChevronsDownUp,
   ChevronsUpDown,
 } from "lucide-react";
 import { SearchBar } from "./components/SearchBar";
-import { QuickAddOverlay } from "./components/QuickAddOverlay";
 import { CategoryDropdown } from "./components/CategoryDropdown";
 import { CategoryGroup } from "./components/CategoryGroup";
 import { LinkCard } from "./components/LinkCard";
 import { SaveLinkModal } from "./components/SaveLinkModal";
 import { AddCategoryModal } from "./components/AddCategoryModal";
 import { Sidebar } from "./components/Sidebar";
+import { isValidUrl } from "@/lib/utils";
 import type { Category, CategoryNode, Link } from "./components/types";
 
 const STORAGE_KEY = "linkvault:ui-state";
@@ -59,7 +62,7 @@ export default function Home() {
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
   const [uncategorizedOpen, setUncategorizedOpen] = useState(true);
   const [collapsedCategoryIds, setCollapsedCategoryIds] = useState<Set<string>>(
     new Set(),
@@ -207,6 +210,53 @@ export default function Home() {
 
   const uncategorizedLinks = filteredLinks.filter((l) => !l.categoryId);
 
+  async function handleDirectSaveLink(url: string) {
+    const trimmed = url.trim();
+    if (!isValidUrl(trimmed)) {
+      throw new Error("Please paste a valid http(s) URL");
+    }
+
+    let title = trimmed;
+    let summary: string | null = null;
+    let metaImage: string | null = null;
+
+    try {
+      const previewRes = await fetch("/api/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmed }),
+      });
+      if (previewRes.ok) {
+        const preview = await previewRes.json();
+        if (preview.title) title = preview.title;
+        if (preview.description) summary = preview.description;
+        if (preview.image) metaImage = preview.image;
+      }
+    } catch {
+      // Preview is optional; keep the URL as title.
+    }
+
+    const res = await fetch("/api/links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url: trimmed,
+        title,
+        summary,
+        metaImage,
+        categoryId: null,
+      }),
+    });
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      throw new Error(data.error ?? "Failed to save link");
+    }
+
+    const data = await res.json();
+    handleLinkSaved({ ...data.link, categoryId: null });
+  }
+
   async function handleDeleteLink(id: string) {
     setLinks((prev) => prev.filter((l) => l.id !== id));
     await fetch(`/api/links/${id}`, { method: "DELETE" });
@@ -320,17 +370,26 @@ export default function Home() {
             </div>
           </div>
           <button
-            onClick={() => setQuickAddOpen(true)}
-            className="rounded-lg p-2 text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
-            aria-label="Quick add link"
+            onClick={() => setSearchOpen((v) => !v)}
+            className={`rounded-lg p-2 transition-colors ${
+              searchOpen || search
+                ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300"
+                : "text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10 hover:text-zinc-900 dark:hover:text-zinc-100"
+            }`}
+            aria-label="Open search"
+            aria-pressed={searchOpen}
           >
-            <Plus className="h-5 w-5" />
+            <Search className="h-5 w-5" />
           </button>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6 space-y-6">
-        <SearchBar value={search} onChange={setSearch} />
+        <DirectAddLinkBar onSave={handleDirectSaveLink} />
+
+        {(searchOpen || search) && (
+          <SearchBar value={search} onChange={setSearch} autoFocus={searchOpen} />
+        )}
 
         {categories.length > 0 && (
           <div className="flex items-center gap-2">
@@ -440,12 +499,6 @@ export default function Home() {
         onNewCategory={() => setCategoryModalOpen(true)}
       />
 
-      <QuickAddOverlay
-        open={quickAddOpen}
-        onClose={() => setQuickAddOpen(false)}
-        onSaved={handleLinkSaved}
-        categories={categories}
-      />
 
       <SaveLinkModal
         open={saveModalOpen}
@@ -467,6 +520,99 @@ export default function Home() {
         categories={categories}
         onSaved={handleCategorySaved}
       />
+    </div>
+  );
+}
+
+type DirectAddLinkBarProps = {
+  onSave: (url: string) => Promise<void>;
+};
+
+function DirectAddLinkBar({ onSave }: DirectAddLinkBarProps) {
+  const [url, setUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  async function handlePaste() {
+    try {
+      if (typeof navigator.clipboard?.readText !== "function") {
+        setError("Clipboard access unavailable — paste with Ctrl/Cmd+V");
+        return;
+      }
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setUrl(text.trim());
+        setError(null);
+        setSaved(false);
+      }
+    } catch {
+      setError("Clipboard access denied — paste with Ctrl/Cmd+V");
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setSaved(false);
+    setSaving(true);
+    try {
+      await onSave(url);
+      setUrl("");
+      setSaved(true);
+      setTimeout(() => setSaved(false), 1800);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to save link");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <form onSubmit={handleSubmit}>
+        <div className="group flex items-stretch overflow-hidden rounded-full border border-zinc-300/70 bg-zinc-50 shadow-sm transition-all focus-within:border-indigo-500/60 focus-within:bg-white dark:border-white/10 dark:bg-white/[0.03] dark:focus-within:bg-white/[0.06]">
+          <button
+            type="button"
+            onClick={handlePaste}
+            disabled={saving}
+            aria-label="Paste from clipboard"
+            className="flex shrink-0 items-center justify-center pl-5 pr-2 text-zinc-500 transition-colors hover:text-zinc-900 disabled:opacity-50 dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            <ClipboardPaste className="h-5 w-5" />
+          </button>
+          <input
+            type="url"
+            value={url}
+            onChange={(e) => {
+              setUrl(e.target.value);
+              setError(null);
+              setSaved(false);
+            }}
+            placeholder="Paste a link to save…"
+            disabled={saving}
+            className="min-w-0 flex-1 bg-transparent py-3 pl-2 pr-4 text-base text-zinc-900 outline-none placeholder:text-zinc-500 disabled:opacity-50 dark:text-zinc-100"
+          />
+          <div className="w-px self-stretch bg-zinc-300/70 dark:bg-white/10" />
+          <button
+            type="submit"
+            disabled={saving || !url.trim()}
+            aria-label="Save link"
+            className="group/save flex items-center gap-2 px-5 text-sm font-semibold text-indigo-600 transition-colors hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-40 dark:text-indigo-300 dark:hover:bg-indigo-500/10 sm:px-6"
+          >
+            <span className="hidden sm:inline">Save</span>
+            {saving ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : saved ? (
+              <Check className="h-5 w-5 text-emerald-500" />
+            ) : (
+              <ArrowRight className="h-5 w-5 transition-transform duration-200 group-hover/save:translate-x-1" />
+            )}
+          </button>
+        </div>
+      </form>
+      {error && <p className="px-2 text-sm text-red-500 dark:text-red-400">{error}</p>}
+      {saved && <p className="px-2 text-sm font-medium text-emerald-600 dark:text-emerald-400">Saved to Uncategorized</p>}
     </div>
   );
 }
