@@ -14,6 +14,7 @@ export type Link = {
   title: string;
   summary: string | null;
   metaImage: string | null;
+  checked: boolean;
   categoryId: string | null;
   createdAt: string;
 };

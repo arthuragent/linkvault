@@ -26,6 +26,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
   if (typeof body.title === "string" && body.title.trim()) updates.title = body.title.trim();
   if (typeof body.summary === "string" || body.summary === null) updates.summary = body.summary;
   if (typeof body.metaImage === "string" || body.metaImage === null) updates.metaImage = body.metaImage;
+  if (typeof body.checked === "boolean") updates.checked = body.checked;
   if (typeof body.categoryId === "string" || body.categoryId === null) updates.categoryId = body.categoryId;
 
   if (Object.keys(updates).length === 0) {

@@ -4,6 +4,7 @@ import {
   text,
   integer,
   timestamp,
+  boolean,
   index,
   primaryKey,
 } from "drizzle-orm/pg-core";
@@ -35,6 +36,7 @@ export const links = pgTable(
     title: text("title").notNull(),
     summary: text("summary"),
     metaImage: text("meta_image"),
+    checked: boolean("checked").notNull().default(false),
     categoryId: uuid("category_id").references(() => categories.id, {
       onDelete: "set null",
     }),

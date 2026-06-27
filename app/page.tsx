@@ -212,6 +212,22 @@ export default function Home() {
     await fetch(`/api/links/${id}`, { method: "DELETE" });
   }
 
+  async function handleToggleChecked(id: string, checked: boolean) {
+    setLinks((prev) =>
+      prev.map((l) => (l.id === id ? { ...l, checked } : l)),
+    );
+    const res = await fetch(`/api/links/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ checked }),
+    });
+    if (!res.ok) {
+      setLinks((prev) =>
+        prev.map((l) => (l.id === id ? { ...l, checked: !checked } : l)),
+      );
+    }
+  }
+
   async function handleMoveLink(id: string, categoryId: string | null) {
     setLinks((prev) =>
       prev.map((l) => (l.id === id ? { ...l, categoryId } : l)),
@@ -367,6 +383,7 @@ export default function Home() {
                     onDeleteCategory={handleDeleteCategory}
                     onEditLink={handleEditLink}
                     onMoveLink={handleMoveLink}
+                    onToggleChecked={handleToggleChecked}
                     onRefreshLink={handleRefreshLink}
                   />
                 ))}
@@ -398,6 +415,7 @@ export default function Home() {
                             onDelete={handleDeleteLink}
                             onEdit={handleEditLink}
                             onMove={handleMoveLink}
+                            onToggleChecked={handleToggleChecked}
                             onRefresh={handleRefreshLink}
                           />
                         ))}

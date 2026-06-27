@@ -6,6 +6,7 @@ import {
   Pencil,
   Share2,
   Check,
+  CircleCheck,
   FolderInput,
   ArrowLeft,
   RefreshCw,
@@ -22,6 +23,7 @@ type Props = {
   onDelete: (id: string) => void;
   onEdit: (link: Link) => void;
   onMove: (id: string, categoryId: string | null) => void;
+  onToggleChecked: (id: string, checked: boolean) => void;
   onRefresh: (link: Link) => Promise<void> | void;
 };
 
@@ -34,6 +36,7 @@ export function LinkCard({
   onDelete,
   onEdit,
   onMove,
+  onToggleChecked,
   onRefresh,
 }: Props) {
   const color = category?.color ?? "#6366f1";
@@ -117,6 +120,11 @@ export function LinkCard({
     }
   }
 
+  function handleToggleChecked() {
+    setMenuOpen(false);
+    onToggleChecked(link.id, !link.checked);
+  }
+
   function handlePickCategory(categoryId: string | null) {
     setMenuOpen(false);
     if (categoryId !== (link.categoryId ?? null)) {
@@ -170,6 +178,12 @@ export function LinkCard({
 
         <div className="p-4 md:flex-1 md:min-w-0 md:py-3 md:px-4">
           <div className="flex items-center gap-2 min-w-0 mb-2">
+            {link.checked && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex-shrink-0">
+                <CircleCheck className="h-3 w-3" />
+                Done
+              </span>
+            )}
             {category && (
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0"
@@ -211,6 +225,7 @@ export function LinkCard({
           onShare={handleShare}
           onDelete={handleDelete}
           onPickCategory={handlePickCategory}
+          onToggleChecked={handleToggleChecked}
           onRefresh={handleRefresh}
         />
       )}
@@ -245,6 +260,7 @@ type MenuProps = {
   onShare: () => void;
   onDelete: () => void;
   onPickCategory: (categoryId: string | null) => void;
+  onToggleChecked: () => void;
   onRefresh: () => void;
 };
 
@@ -256,6 +272,7 @@ function LinkActionsMenu({
   onShare,
   onDelete,
   onPickCategory,
+  onToggleChecked,
   onRefresh,
 }: MenuProps) {
   const [view, setView] = useState<"actions" | "move">("actions");
@@ -292,6 +309,11 @@ function LinkActionsMenu({
             </div>
             <div className="divide-y divide-zinc-200 dark:divide-white/10">
               <MenuItem icon={Pencil} label="Edit" onClick={onEdit} />
+              <MenuItem
+                icon={CircleCheck}
+                label={link.checked ? "Mark as not done" : "Mark as done"}
+                onClick={onToggleChecked}
+              />
               <MenuItem
                 icon={FolderInput}
                 label="Move to category"
