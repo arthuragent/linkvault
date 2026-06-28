@@ -18,6 +18,8 @@ type MegaScribeJobResponse = {
   supported_formats?: string[];
   transcript_download_urls?: Record<string, string | null>;
   audio_download_url?: string | null;
+  chunks_done?: number | null;
+  chunks_total?: number | null;
   transcript?: {
     text?: string | null;
     segments?: unknown;
@@ -25,6 +27,24 @@ type MegaScribeJobResponse = {
 };
 
 const TERMINAL_STATUSES = new Set(["completed", "failed", "error", "cancelled"]);
+const ZERO_CHUNK_STALE_MS = 30 * 60 * 1000;
+
+function requestedAtMs(value: Date | string | null) {
+  if (!value) return null;
+  const ms = value instanceof Date ? value.getTime() : Date.parse(value);
+  return Number.isFinite(ms) ? ms : null;
+}
+
+function staleZeroChunkMessage(data: MegaScribeJobResponse, requestedAt: Date | string | null) {
+  const status = normalizeStatus(data.status);
+  if (status !== "processing") return null;
+  if (data.chunks_done !== 0 || typeof data.chunks_total !== "number" || data.chunks_total <= 0) {
+    return null;
+  }
+  const requestedMs = requestedAtMs(requestedAt);
+  if (!requestedMs || Date.now() - requestedMs < ZERO_CHUNK_STALE_MS) return null;
+  return `MegaScribe is stuck in processing: 0/${data.chunks_total} chunks finished for more than 30 minutes. Retry transcription.`;
+}
 
 function megaScribeConfig() {
   const token = process.env.MEGASCRIBE_API_TOKEN?.trim();
@@ -216,6 +236,24 @@ export async function GET(req: Request, { params }: Ctx) {
   }
 
   const status = normalizeStatus(data.status);
+  const staleMessage = staleZeroChunkMessage(data, link.transcriptionRequestedAt);
+  if (staleMessage) {
+    const updated = await db
+      .update(links)
+      .set({
+        transcriptionStatus: "failed",
+        transcriptionError: staleMessage,
+        transcriptionCompletedAt: new Date(),
+      })
+      .where(eq(links.id, id))
+      .returning();
+
+    return NextResponse.json({
+      link: updated[0],
+      job: { ...data, status: "failed", error: staleMessage },
+    });
+  }
+
   const text = status === "completed" ? await savedTranscriptText(data) : null;
   const updated = await db
     .update(links)
