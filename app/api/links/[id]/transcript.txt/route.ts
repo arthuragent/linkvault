@@ -32,7 +32,7 @@ export async function GET(_req: Request, { params }: Ctx) {
   return new NextResponse(link.transcriptText, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Content-Disposition": `attachment; filename="${safeFilename(link.title)}"`,
+      "Content-Disposition": `inline; filename="${safeFilename(link.title)}"`,
       "Cache-Control": "private, no-store",
     },
   });
