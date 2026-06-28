@@ -22,6 +22,14 @@ export async function PATCH(req: Request, { params }: Ctx) {
       return NextResponse.json({ error: "Invalid URL" }, { status: 400 });
     }
     updates.url = body.url.trim();
+    updates.transcriptionStatus = "idle";
+    updates.transcriptionJobId = null;
+    updates.transcriptText = null;
+    updates.transcriptUrl = null;
+    updates.audioUrl = null;
+    updates.transcriptionError = null;
+    updates.transcriptionRequestedAt = null;
+    updates.transcriptionCompletedAt = null;
   }
   if (typeof body.title === "string" && body.title.trim()) updates.title = body.title.trim();
   if (typeof body.summary === "string" || body.summary === null) updates.summary = body.summary;

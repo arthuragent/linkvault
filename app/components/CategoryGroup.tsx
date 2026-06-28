@@ -18,6 +18,8 @@ type Props = {
   onMoveLink: (id: string, categoryId: string | null) => void;
   onToggleChecked: (id: string, checked: boolean) => void;
   onRefreshLink: (link: Link) => Promise<void> | void;
+  onTranscribeLink: (link: Link) => Promise<Link>;
+  onPollTranscription: (linkId: string) => Promise<Link | null>;
 };
 
 export function CategoryGroup({
@@ -33,6 +35,8 @@ export function CategoryGroup({
   onMoveLink,
   onToggleChecked,
   onRefreshLink,
+  onTranscribeLink,
+  onPollTranscription,
 }: Props) {
   const open = !collapsed.has(node.id);
   const total =
@@ -95,6 +99,8 @@ export function CategoryGroup({
               onMove={onMoveLink}
               onToggleChecked={onToggleChecked}
               onRefresh={onRefreshLink}
+              onTranscribe={onTranscribeLink}
+              onPollTranscription={onPollTranscription}
             />
           ))}
           {node.children.map((child) => (
@@ -112,6 +118,8 @@ export function CategoryGroup({
               onMoveLink={onMoveLink}
               onToggleChecked={onToggleChecked}
               onRefreshLink={onRefreshLink}
+              onTranscribeLink={onTranscribeLink}
+              onPollTranscription={onPollTranscription}
             />
           ))}
         </div>

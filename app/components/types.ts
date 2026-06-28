@@ -15,6 +15,14 @@ export type Link = {
   summary: string | null;
   metaImage: string | null;
   checked: boolean;
+  transcriptionStatus: string;
+  transcriptionJobId: string | null;
+  transcriptText: string | null;
+  transcriptUrl: string | null;
+  audioUrl: string | null;
+  transcriptionError: string | null;
+  transcriptionRequestedAt: string | null;
+  transcriptionCompletedAt: string | null;
   categoryId: string | null;
   createdAt: string;
 };

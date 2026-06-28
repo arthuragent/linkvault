@@ -318,6 +318,37 @@ export default function Home() {
     }
   }
 
+  async function handleTranscribeLink(link: Link) {
+    const hasJob = Boolean(link.transcriptionJobId) &&
+      !["idle", "failed", "error", "cancelled"].includes(link.transcriptionStatus);
+    const res = await fetch(`/api/links/${link.id}/transcription`, {
+      method: hasJob ? "GET" : "POST",
+      headers: { "Content-Type": "application/json" },
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error ?? "Failed to transcribe link");
+    }
+    if (data.link) {
+      setLinks((prev) => prev.map((l) => (l.id === link.id ? data.link : l)));
+      return data.link as Link;
+    }
+    return link;
+  }
+
+  async function handlePollTranscription(linkId: string) {
+    const res = await fetch(`/api/links/${linkId}/transcription`, { cache: "no-store" });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error ?? "Failed to check transcription status");
+    }
+    if (data.link) {
+      setLinks((prev) => prev.map((l) => (l.id === linkId ? data.link : l)));
+      return data.link as Link;
+    }
+    return null;
+  }
+
   async function handleDeleteCategory(id: string) {
     setCategories((prev) => prev.filter((c) => c.id !== id));
     setLinks((prev) =>
@@ -444,6 +475,8 @@ export default function Home() {
                     onMoveLink={handleMoveLink}
                     onToggleChecked={handleToggleChecked}
                     onRefreshLink={handleRefreshLink}
+                    onTranscribeLink={handleTranscribeLink}
+                    onPollTranscription={handlePollTranscription}
                   />
                 ))}
                 {uncategorizedLinks.length > 0 && (
@@ -476,6 +509,8 @@ export default function Home() {
                             onMove={handleMoveLink}
                             onToggleChecked={handleToggleChecked}
                             onRefresh={handleRefreshLink}
+                            onTranscribe={handleTranscribeLink}
+                            onPollTranscription={handlePollTranscription}
                           />
                         ))}
                       </div>

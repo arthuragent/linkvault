@@ -11,6 +11,9 @@ import {
   ArrowLeft,
   RefreshCw,
   Loader2,
+  FileText,
+  Headphones,
+  AlertCircle,
 } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
 import { useModalBackButton } from "./useModalBackButton";
@@ -25,9 +28,41 @@ type Props = {
   onMove: (id: string, categoryId: string | null) => void;
   onToggleChecked: (id: string, checked: boolean) => void;
   onRefresh: (link: Link) => Promise<void> | void;
+  onTranscribe: (link: Link) => Promise<Link>;
+  onPollTranscription: (linkId: string) => Promise<Link | null>;
 };
 
 const LONG_PRESS_MS = 450;
+const ACTIVE_TRANSCRIPTION_STATUSES = new Set([
+  "downloading",
+  "pending",
+  "queued",
+  "processing",
+  "transcribing",
+  "running",
+]);
+
+function isYouTubeUrl(url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
+    return host === "youtube.com" || host === "youtu.be" || host.endsWith(".youtube.com");
+  } catch {
+    return false;
+  }
+}
+
+function isTranscriptionActive(status: string) {
+  return ACTIVE_TRANSCRIPTION_STATUSES.has(status.toLowerCase());
+}
+
+function transcriptionLabel(link: Link) {
+  const status = link.transcriptionStatus.toLowerCase();
+  if (status === "completed") return "Transcript ready";
+  if (status === "failed" || status === "error") return "Transcript failed";
+  if (isTranscriptionActive(status)) return "Transcribing…";
+  return "Transcribe video";
+}
 
 export function LinkCard({
   link,
@@ -38,6 +73,8 @@ export function LinkCard({
   onMove,
   onToggleChecked,
   onRefresh,
+  onTranscribe,
+  onPollTranscription,
 }: Props) {
   const color = category?.color ?? "#6366f1";
   const textOnColor = isLightColor(color) ? "#0a0a0a" : "#ffffff";
@@ -46,14 +83,39 @@ export function LinkCard({
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [transcribing, setTranscribing] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressFiredRef = useRef(false);
+  const canTranscribe = isYouTubeUrl(link.url);
 
   useEffect(() => {
     return () => {
       if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    if (!link.transcriptionJobId || !isTranscriptionActive(link.transcriptionStatus)) return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        await onPollTranscription(link.id);
+        if (!cancelled) setTranscriptionError(null);
+      } catch (err) {
+        if (!cancelled) {
+          setTranscriptionError(
+            err instanceof Error ? err.message : "Failed to check transcription status",
+          );
+        }
+      }
+    };
+    const timer = window.setInterval(() => void poll(), 8000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [link.id, link.transcriptionJobId, link.transcriptionStatus, onPollTranscription]);
 
   function startLongPress() {
     longPressFiredRef.current = false;
@@ -142,6 +204,24 @@ export function LinkCard({
     }
   }
 
+  async function handleTranscribe() {
+    setMenuOpen(false);
+    setTranscribing(true);
+    setTranscriptionError(null);
+    try {
+      await onTranscribe(link);
+    } catch (err) {
+      setTranscriptionError(err instanceof Error ? err.message : "Failed to transcribe link");
+    } finally {
+      setTranscribing(false);
+    }
+  }
+
+  const status = link.transcriptionStatus.toLowerCase();
+  const showTranscript = status === "completed" && (link.transcriptText || link.audioUrl);
+  const showTranscriptionStatus =
+    canTranscribe && (transcribing || isTranscriptionActive(status) || status === "failed" || status === "error" || showTranscript);
+
   return (
     <>
       <div
@@ -213,6 +293,64 @@ export function LinkCard({
               {link.summary}
             </p>
           )}
+
+          {showTranscriptionStatus && (
+            <div className="mt-3 rounded-xl border border-zinc-200 bg-white/70 p-3 text-sm dark:border-white/10 dark:bg-white/[0.03]">
+              <div className="flex items-center gap-2 font-medium text-zinc-700 dark:text-zinc-200">
+                {transcribing || isTranscriptionActive(status) ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-indigo-500" />
+                ) : status === "failed" || status === "error" ? (
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                ) : (
+                  <FileText className="h-4 w-4 text-emerald-500" />
+                )}
+                {transcriptionLabel(link)}
+              </div>
+              {(link.transcriptionError || transcriptionError) && (
+                <p className="mt-2 text-xs text-red-500 dark:text-red-400">
+                  {link.transcriptionError || transcriptionError}
+                </p>
+              )}
+              {showTranscript && (
+                <>
+                  {link.transcriptText && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer text-xs font-medium text-indigo-600 dark:text-indigo-300">
+                        Show saved transcript
+                      </summary>
+                      <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap rounded-lg bg-zinc-50 p-3 text-xs leading-relaxed text-zinc-700 dark:bg-zinc-900 dark:text-zinc-300">
+                        {link.transcriptText}
+                      </p>
+                    </details>
+                  )}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {link.audioUrl && (
+                      <a
+                        href={link.audioUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25"
+                      >
+                        <Headphones className="h-3.5 w-3.5" />
+                        Audio file
+                      </a>
+                    )}
+                    {link.transcriptUrl && (
+                      <a
+                        href={link.transcriptUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
+                      >
+                        <FileText className="h-3.5 w-3.5" />
+                        Transcript page
+                      </a>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -227,6 +365,9 @@ export function LinkCard({
           onPickCategory={handlePickCategory}
           onToggleChecked={handleToggleChecked}
           onRefresh={handleRefresh}
+          onTranscribe={handleTranscribe}
+          canTranscribe={canTranscribe}
+          transcribing={transcribing}
         />
       )}
 
@@ -262,6 +403,9 @@ type MenuProps = {
   onPickCategory: (categoryId: string | null) => void;
   onToggleChecked: () => void;
   onRefresh: () => void;
+  onTranscribe: () => void;
+  canTranscribe: boolean;
+  transcribing: boolean;
 };
 
 function LinkActionsMenu({
@@ -274,6 +418,9 @@ function LinkActionsMenu({
   onPickCategory,
   onToggleChecked,
   onRefresh,
+  onTranscribe,
+  canTranscribe,
+  transcribing,
 }: MenuProps) {
   const [view, setView] = useState<"actions" | "move">("actions");
 
@@ -324,6 +471,13 @@ function LinkActionsMenu({
                 label="Refresh preview"
                 onClick={onRefresh}
               />
+              {canTranscribe && (
+                <MenuItem
+                  icon={transcribing ? Loader2 : FileText}
+                  label={transcribing ? "Starting transcription…" : transcriptionLabel(link)}
+                  onClick={onTranscribe}
+                />
+              )}
               <MenuItem icon={Share2} label="Share" onClick={onShare} />
               <MenuItem
                 icon={Trash2}
