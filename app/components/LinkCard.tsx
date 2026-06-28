@@ -37,6 +37,7 @@ const ACTIVE_TRANSCRIPTION_STATUSES = new Set([
   "downloading",
   "pending",
   "queued",
+  "splitting",
   "processing",
   "transcribing",
   "running",
