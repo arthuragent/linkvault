@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ExternalLink, FileText, Headphones } from "lucide-react";
+import { ArrowLeft, Download, ExternalLink, FileText, Headphones } from "lucide-react";
 import { eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { links } from "@/lib/schema";
@@ -93,13 +93,11 @@ export default async function TranscriptPage({ params }: Props) {
               </a>
               {link.audioUrl && (
                 <a
-                  href={link.audioUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href="#audio-player"
                   className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25"
                 >
                   <Headphones className="h-3.5 w-3.5" />
-                  Audio file
+                  Listen
                 </a>
               )}
               <a
@@ -114,6 +112,35 @@ export default async function TranscriptPage({ params }: Props) {
             </div>
           </div>
         </section>
+
+        {link.audioUrl && (
+          <section
+            id="audio-player"
+            className="mt-5 rounded-3xl border border-indigo-100 bg-indigo-50/70 p-4 shadow-sm dark:border-indigo-400/20 dark:bg-indigo-500/10 sm:p-5"
+          >
+            <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex items-center gap-2 text-sm font-semibold text-indigo-900 dark:text-indigo-100">
+                <Headphones className="h-4 w-4" />
+                Original audio
+              </div>
+              <a
+                href={`/api/links/${link.id}/audio?download=1`}
+                className="inline-flex items-center justify-center gap-1.5 rounded-full bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white transition-colors hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-400"
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download audio
+              </a>
+            </div>
+            <audio
+              controls
+              preload="metadata"
+              src={`/api/links/${link.id}/audio`}
+              className="h-11 w-full"
+            >
+              Your browser does not support the audio player.
+            </audio>
+          </section>
+        )}
 
         <article className="mt-5 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-zinc-900/70 sm:p-6">
           <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-7 text-zinc-800 dark:text-zinc-200 sm:text-base">
