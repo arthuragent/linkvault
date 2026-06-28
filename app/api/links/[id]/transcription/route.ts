@@ -15,6 +15,8 @@ type MegaScribeJobResponse = {
   transcript_id?: string | null;
   transcript_url?: string | null;
   transcript_api_url?: string | null;
+  supported_formats?: string[];
+  transcript_download_urls?: Record<string, string | null>;
   audio_download_url?: string | null;
   transcript?: {
     text?: string | null;
@@ -62,6 +64,43 @@ function transcriptText(payload: MegaScribeJobResponse) {
       .filter(Boolean)
       .join("\n");
   }
+  return null;
+}
+
+function linkVaultTranscriptUrl(request: Request, id: string) {
+  return new URL(`/api/links/${encodeURIComponent(id)}/transcript.txt`, request.url).toString();
+}
+
+async function fetchMegaScribeText(url: string) {
+  const { token } = megaScribeConfig();
+  if (!token) return null;
+  const response = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: "no-store",
+  });
+  if (!response.ok) return null;
+  const text = await response.text();
+  return text.trim() ? text.trim() : null;
+}
+
+async function savedTranscriptText(payload: MegaScribeJobResponse) {
+  const embedded = transcriptText(payload);
+  if (embedded) return embedded;
+
+  const txtUrl = payload.transcript_download_urls?.txt;
+  if (typeof txtUrl === "string" && txtUrl.trim()) {
+    const text = await fetchMegaScribeText(txtUrl.trim());
+    if (text) return text;
+  }
+
+  const apiUrl = payload.transcript_api_url;
+  if (typeof apiUrl === "string" && apiUrl.trim()) {
+    const url = new URL(apiUrl.trim());
+    url.searchParams.set("format", "txt");
+    const text = await fetchMegaScribeText(url.toString());
+    if (text) return text;
+  }
+
   return null;
 }
 
@@ -149,7 +188,7 @@ export async function POST(_req: Request, { params }: Ctx) {
   return NextResponse.json({ link: updated[0], job: data }, { status: 202 });
 }
 
-export async function GET(_req: Request, { params }: Ctx) {
+export async function GET(req: Request, { params }: Ctx) {
   const { id } = await params;
   const link = await getLink(id);
   if (!link) {
@@ -158,7 +197,10 @@ export async function GET(_req: Request, { params }: Ctx) {
   if (!link.transcriptionJobId) {
     return NextResponse.json({ link });
   }
-  if (TERMINAL_STATUSES.has(link.transcriptionStatus)) {
+  if (
+    TERMINAL_STATUSES.has(link.transcriptionStatus) &&
+    (link.transcriptionStatus !== "completed" || link.transcriptText)
+  ) {
     return NextResponse.json({ link });
   }
 
@@ -174,14 +216,17 @@ export async function GET(_req: Request, { params }: Ctx) {
   }
 
   const status = normalizeStatus(data.status);
-  const text = status === "completed" ? transcriptText(data) : null;
+  const text = status === "completed" ? await savedTranscriptText(data) : null;
   const updated = await db
     .update(links)
     .set({
       transcriptionStatus: status,
-      transcriptionError: data.error ?? null,
+      transcriptionError:
+        status === "completed" && !text
+          ? "MegaScribe completed, but LinkVault could not fetch and save the .txt transcript."
+          : data.error ?? null,
       transcriptText: text,
-      transcriptUrl: data.transcript_url ?? data.transcript_api_url ?? null,
+      transcriptUrl: status === "completed" && text ? linkVaultTranscriptUrl(req, id) : null,
       audioUrl: data.audio_download_url ?? null,
       transcriptionCompletedAt: status === "completed" ? new Date() : null,
     })
