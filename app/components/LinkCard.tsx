@@ -65,6 +65,14 @@ function transcriptionLabel(link: Link) {
   return "Transcribe video";
 }
 
+function transcriptionActionLabel(link: Link) {
+  const status = link.transcriptionStatus.toLowerCase();
+  if (status === "failed" || status === "error" || status === "cancelled") {
+    return "Retry transcription";
+  }
+  return transcriptionLabel(link);
+}
+
 export function LinkCard({
   link,
   category,
@@ -475,7 +483,7 @@ function LinkActionsMenu({
               {canTranscribe && (
                 <MenuItem
                   icon={transcribing ? Loader2 : FileText}
-                  label={transcribing ? "Starting transcription…" : transcriptionLabel(link)}
+                  label={transcribing ? "Starting transcription…" : transcriptionActionLabel(link)}
                   onClick={onTranscribe}
                 />
               )}
