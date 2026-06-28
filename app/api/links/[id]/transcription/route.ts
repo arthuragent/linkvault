@@ -68,7 +68,7 @@ function transcriptText(payload: MegaScribeJobResponse) {
 }
 
 function linkVaultTranscriptUrl(request: Request, id: string) {
-  return new URL(`/api/links/${encodeURIComponent(id)}/transcript.txt`, request.url).toString();
+  return new URL(`/links/${encodeURIComponent(id)}/transcript`, request.url).toString();
 }
 
 async function fetchMegaScribeText(url: string) {

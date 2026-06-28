@@ -335,9 +335,9 @@ export function LinkCard({
                         Audio file
                       </a>
                     )}
-                    {link.transcriptUrl && (
+                    {link.transcriptText && (
                       <a
-                        href={link.transcriptUrl}
+                        href={`/links/${link.id}/transcript`}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
