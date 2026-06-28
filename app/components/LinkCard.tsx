@@ -5,6 +5,7 @@ import {
   Trash2,
   Pencil,
   Share2,
+  ClipboardCopy,
   Check,
   CircleCheck,
   FolderInput,
@@ -176,6 +177,17 @@ export function LinkCard({
       setTimeout(() => setCopied(false), 1500);
     } catch {
       // ignore
+    }
+  }
+
+  async function handleCopyLink() {
+    setMenuOpen(false);
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch {
+      setTranscriptionError("Could not copy link to clipboard");
     }
   }
 
@@ -369,6 +381,7 @@ export function LinkCard({
           categories={categories}
           onClose={() => setMenuOpen(false)}
           onEdit={handleEdit}
+          onCopyLink={handleCopyLink}
           onShare={handleShare}
           onDelete={handleDelete}
           onPickCategory={handlePickCategory}
@@ -407,6 +420,7 @@ type MenuProps = {
   categories: Category[];
   onClose: () => void;
   onEdit: () => void;
+  onCopyLink: () => void;
   onShare: () => void;
   onDelete: () => void;
   onPickCategory: (categoryId: string | null) => void;
@@ -422,6 +436,7 @@ function LinkActionsMenu({
   categories,
   onClose,
   onEdit,
+  onCopyLink,
   onShare,
   onDelete,
   onPickCategory,
@@ -465,6 +480,7 @@ function LinkActionsMenu({
             </div>
             <div className="divide-y divide-zinc-200 dark:divide-white/10">
               <MenuItem icon={Pencil} label="Edit" onClick={onEdit} />
+              <MenuItem icon={ClipboardCopy} label="Copy link" onClick={onCopyLink} />
               <MenuItem
                 icon={CircleCheck}
                 label={link.checked ? "Mark as not done" : "Mark as done"}
