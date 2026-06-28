@@ -101,14 +101,21 @@ export default async function TranscriptPage({ params }: Props) {
                 </a>
               )}
               <a
-                href={`/api/links/${link.id}/transcript.txt`}
-                target="_blank"
-                rel="noopener noreferrer"
+                href={`/api/links/${link.id}/transcript.txt?download=1`}
                 className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-medium text-emerald-700 transition-colors hover:bg-emerald-100 dark:bg-emerald-500/15 dark:text-emerald-300 dark:hover:bg-emerald-500/25"
               >
-                <FileText className="h-3.5 w-3.5" />
-                Raw text
+                <Download className="h-3.5 w-3.5" />
+                Download transcript
               </a>
+              {link.audioUrl && (
+                <a
+                  href={`/api/links/${link.id}/audio?download=1`}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 px-3 py-1.5 text-xs font-medium text-indigo-700 transition-colors hover:bg-indigo-100 dark:bg-indigo-500/15 dark:text-indigo-300 dark:hover:bg-indigo-500/25"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Download audio
+                </a>
+              )}
             </div>
           </div>
         </section>

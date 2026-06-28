@@ -18,7 +18,7 @@ function safeFilename(title: string) {
   return `${base || "linkvault-transcript"}.txt`;
 }
 
-export async function GET(_req: Request, { params }: Ctx) {
+export async function GET(req: Request, { params }: Ctx) {
   const { id } = await params;
   const rows = await db.select().from(links).where(eq(links.id, id)).limit(1);
   const link = rows[0];
@@ -29,10 +29,14 @@ export async function GET(_req: Request, { params }: Ctx) {
     return NextResponse.json({ error: "Transcript not saved" }, { status: 404 });
   }
 
+  const disposition = new URL(req.url).searchParams.get("download") === "1"
+    ? "attachment"
+    : "inline";
+
   return new NextResponse(link.transcriptText, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
-      "Content-Disposition": `inline; filename="${safeFilename(link.title)}"`,
+      "Content-Disposition": `${disposition}; filename="${safeFilename(link.title)}"`,
       "Cache-Control": "private, no-store",
     },
   });
