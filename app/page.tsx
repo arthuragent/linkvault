@@ -70,6 +70,9 @@ export default function Home() {
   const [prefillUrl, setPrefillUrl] = useState("");
   const [prefillTitle, setPrefillTitle] = useState("");
   const [editingLink, setEditingLink] = useState<Link | null>(null);
+  const [directSavedLink, setDirectSavedLink] = useState<Link | null>(null);
+  const [assigningDirectCategoryId, setAssigningDirectCategoryId] = useState<string | null>(null);
+  const [directAssignError, setDirectAssignError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   function openNewLink() {
@@ -210,7 +213,7 @@ export default function Home() {
 
   const uncategorizedLinks = filteredLinks.filter((l) => !l.categoryId);
 
-  async function handleDirectSaveLink(url: string) {
+  async function handleDirectSaveLink(url: string): Promise<Link> {
     const trimmed = url.trim();
     if (!isValidUrl(trimmed)) {
       throw new Error("Please paste a valid http(s) URL");
@@ -254,7 +257,36 @@ export default function Home() {
     }
 
     const data = await res.json();
-    handleLinkSaved({ ...data.link, categoryId: null });
+    const savedLink = { ...data.link, categoryId: null } as Link;
+    handleLinkSaved(savedLink);
+    setDirectSavedLink(savedLink);
+    setDirectAssignError(null);
+    return savedLink;
+  }
+
+  async function handleDirectAssignCategory(categoryId: string) {
+    if (!directSavedLink || assigningDirectCategoryId !== null) return;
+
+    setDirectAssignError(null);
+    setAssigningDirectCategoryId(categoryId);
+    try {
+      const res = await fetch(`/api/links/${directSavedLink.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ categoryId }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "Failed to set category");
+      }
+      const data = await res.json();
+      handleLinkSaved(data.link);
+      setDirectSavedLink(null);
+    } catch (err) {
+      setDirectAssignError(err instanceof Error ? err.message : "Failed to set category");
+    } finally {
+      setAssigningDirectCategoryId(null);
+    }
   }
 
   async function handleDeleteLink(id: string) {
@@ -533,7 +565,17 @@ export default function Home() {
         onClose={() => setSidebarOpen(false)}
         onNewCategory={() => setCategoryModalOpen(true)}
       />
-
+      <DirectCategoryPicker
+        link={directSavedLink}
+        categories={categories}
+        assigningCategoryId={assigningDirectCategoryId}
+        error={directAssignError}
+        onAssign={(categoryId) => void handleDirectAssignCategory(categoryId)}
+        onSkip={() => {
+          setDirectSavedLink(null);
+          setDirectAssignError(null);
+        }}
+      />
 
       <SaveLinkModal
         open={saveModalOpen}
@@ -559,8 +601,134 @@ export default function Home() {
   );
 }
 
+type DirectCategoryPickerProps = {
+  link: Link | null;
+  categories: Category[];
+  assigningCategoryId: string | null;
+  error: string | null;
+  onAssign: (categoryId: string) => void;
+  onSkip: () => void;
+};
+
+function directCategoryLabel(category: Category) {
+  return `${category.emoji ? `${category.emoji} ` : ""}${category.name}`;
+}
+
+function directCategoryScore(category: Category, link: Link) {
+  const haystack = `${link.title} ${link.url} ${link.summary ?? ""}`.toLowerCase();
+  const categoryName = category.name.toLowerCase();
+  let score = 0;
+
+  if (haystack.includes(categoryName)) score += 4;
+  for (const token of categoryName.split(/\s+/).filter((part) => part.length > 2)) {
+    if (haystack.includes(token)) score += 1;
+  }
+
+  return score;
+}
+
+function DirectCategoryPicker({
+  link,
+  categories,
+  assigningCategoryId,
+  error,
+  onAssign,
+  onSkip,
+}: DirectCategoryPickerProps) {
+  const suggestedCategories = useMemo(() => {
+    if (!link) return categories;
+
+    return [...categories].sort((a, b) => {
+      const scoreDelta = directCategoryScore(b, link) - directCategoryScore(a, link);
+      if (scoreDelta !== 0) return scoreDelta;
+      return a.position - b.position;
+    });
+  }, [categories, link]);
+
+  if (!link) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain px-4 py-6 sm:pt-24"
+      onClick={onSkip}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="direct-category-title"
+    >
+      <div className="absolute inset-0 bg-zinc-900/30 backdrop-blur-sm dark:bg-black/50" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative flex w-full max-w-2xl max-h-[calc(100dvh-3rem)] flex-col rounded-3xl border border-zinc-300/60 bg-white/90 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-zinc-900/90"
+      >
+        <div className="space-y-1 text-center">
+          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            Saved to Uncategorized
+          </p>
+          <h2 id="direct-category-title" className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Move it to a category?
+          </h2>
+          <p className="mx-auto max-w-md text-sm text-zinc-600 dark:text-zinc-400">
+            Choose a category to move it, or skip to leave it in Uncategorized.
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+            {link.title}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
+            {link.url}
+          </p>
+        </div>
+
+        {suggestedCategories.length > 0 ? (
+          <div className="mt-5 grid min-h-0 gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2">
+            {suggestedCategories.map((category) => (
+              <button
+                key={category.id}
+                type="button"
+                onClick={() => onAssign(category.id)}
+                disabled={assigningCategoryId !== null}
+                className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-medium text-zinc-800 transition-colors hover:border-indigo-400/60 hover:bg-indigo-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-white/10 dark:bg-white/[0.04] dark:text-zinc-100 dark:hover:bg-indigo-500/10"
+              >
+                <span className="min-w-0 truncate">{directCategoryLabel(category)}</span>
+                {assigningCategoryId === category.id ? (
+                  <Loader2 className="h-4 w-4 shrink-0 animate-spin text-indigo-500" />
+                ) : (
+                  <span
+                    className="h-3 w-3 shrink-0 rounded-full border border-white/70 shadow-sm"
+                    style={{ backgroundColor: category.color }}
+                    aria-hidden="true"
+                  />
+                )}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-5 rounded-2xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+            No categories yet — skip for now and create categories later.
+          </p>
+        )}
+
+        {error && <p className="mt-4 text-center text-sm text-red-500 dark:text-red-400">{error}</p>}
+
+        <div className="mt-5 flex shrink-0 justify-center">
+          <button
+            type="button"
+            onClick={onSkip}
+            disabled={assigningCategoryId !== null}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-zinc-600 hover:bg-zinc-100 disabled:opacity-50 dark:text-zinc-300 dark:hover:bg-white/10"
+          >
+            Leave in Uncategorized
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 type DirectAddLinkBarProps = {
-  onSave: (url: string) => Promise<void>;
+  onSave: (url: string) => Promise<Link>;
 };
 
 function DirectAddLinkBar({ onSave }: DirectAddLinkBarProps) {
