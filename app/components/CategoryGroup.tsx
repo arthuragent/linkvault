@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronRight, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Download, Trash2 } from "lucide-react";
 import { LinkCard } from "./LinkCard";
 import { isLightColor } from "@/lib/utils";
 import type { Category, CategoryNode, Link } from "./types";
@@ -70,17 +70,28 @@ export function CategoryGroup({
             {total} {total === 1 ? "link" : "links"}
           </span>
         </button>
-        <button
-          onClick={() => {
-            if (confirm(`Delete category "${node.name}"? Links will be uncategorized.`)) {
-              onDeleteCategory(node.id);
-            }
-          }}
-          className="rounded-lg p-1.5 text-zinc-500 hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400"
-          aria-label="Delete category"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <a
+            href={`/api/categories/${node.id}/transcripts.txt`}
+            download
+            className="rounded-lg p-1.5 text-zinc-500 hover:bg-emerald-500/15 hover:text-emerald-600 dark:hover:text-emerald-300"
+            aria-label={`Download transcripts for ${node.name}`}
+            title="Download transcripts"
+          >
+            <Download className="h-4 w-4" />
+          </a>
+          <button
+            onClick={() => {
+              if (confirm(`Delete category "${node.name}"? Links will be uncategorized.`)) {
+                onDeleteCategory(node.id);
+              }
+            }}
+            className="rounded-lg p-1.5 text-zinc-500 hover:bg-red-500/20 hover:text-red-500 dark:hover:text-red-400"
+            aria-label="Delete category"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       {open && (
