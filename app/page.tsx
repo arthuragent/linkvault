@@ -12,6 +12,7 @@ import {
   ArrowRight,
   ClipboardPaste,
   Check,
+  FileText,
   ChevronsDownUp,
   ChevronsUpDown,
 } from "lucide-react";
@@ -23,6 +24,7 @@ import { SaveLinkModal } from "./components/SaveLinkModal";
 import { AddCategoryModal } from "./components/AddCategoryModal";
 import { Sidebar } from "./components/Sidebar";
 import { isValidUrl } from "@/lib/utils";
+import { isYouTubeUrl } from "@/lib/youtube-url";
 import type { Category, CategoryNode, Link } from "./components/types";
 
 const STORAGE_KEY = "linkvault:ui-state";
@@ -71,6 +73,9 @@ export default function Home() {
   const [prefillTitle, setPrefillTitle] = useState("");
   const [editingLink, setEditingLink] = useState<Link | null>(null);
   const [directSavedLink, setDirectSavedLink] = useState<Link | null>(null);
+  const [pendingDirectTranscriptionLink, setPendingDirectTranscriptionLink] = useState<Link | null>(null);
+  const [startingDirectTranscription, setStartingDirectTranscription] = useState(false);
+  const [directTranscriptionError, setDirectTranscriptionError] = useState<string | null>(null);
   const [assigningDirectCategoryId, setAssigningDirectCategoryId] = useState<string | null>(null);
   const [directAssignError, setDirectAssignError] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
@@ -280,8 +285,13 @@ export default function Home() {
         throw new Error(data.error ?? "Failed to set category");
       }
       const data = await res.json();
-      handleLinkSaved(data.link);
+      const movedLink = data.link as Link;
+      handleLinkSaved(movedLink);
       setDirectSavedLink(null);
+      if (isYouTubeUrl(movedLink.url)) {
+        setPendingDirectTranscriptionLink(movedLink);
+        setDirectTranscriptionError(null);
+      }
     } catch (err) {
       setDirectAssignError(err instanceof Error ? err.message : "Failed to set category");
     } finally {
@@ -379,6 +389,23 @@ export default function Home() {
       return data.link as Link;
     }
     return null;
+  }
+
+  async function handleDirectTranscriptionStart() {
+    if (!pendingDirectTranscriptionLink || startingDirectTranscription) return;
+
+    setStartingDirectTranscription(true);
+    setDirectTranscriptionError(null);
+    try {
+      await handleTranscribeLink(pendingDirectTranscriptionLink);
+      setPendingDirectTranscriptionLink(null);
+    } catch (err) {
+      setDirectTranscriptionError(
+        err instanceof Error ? err.message : "Failed to start transcription",
+      );
+    } finally {
+      setStartingDirectTranscription(false);
+    }
   }
 
   async function handleDeleteCategory(id: string) {
@@ -576,6 +603,16 @@ export default function Home() {
           setDirectAssignError(null);
         }}
       />
+      <DirectTranscriptionPrompt
+        link={pendingDirectTranscriptionLink}
+        starting={startingDirectTranscription}
+        error={directTranscriptionError}
+        onStart={() => void handleDirectTranscriptionStart()}
+        onSkip={() => {
+          setPendingDirectTranscriptionLink(null);
+          setDirectTranscriptionError(null);
+        }}
+      />
 
       <SaveLinkModal
         open={saveModalOpen}
@@ -597,6 +634,86 @@ export default function Home() {
         categories={categories}
         onSaved={handleCategorySaved}
       />
+    </div>
+  );
+}
+
+type DirectTranscriptionPromptProps = {
+  link: Link | null;
+  starting: boolean;
+  error: string | null;
+  onStart: () => void;
+  onSkip: () => void;
+};
+
+function DirectTranscriptionPrompt({
+  link,
+  starting,
+  error,
+  onStart,
+  onSkip,
+}: DirectTranscriptionPromptProps) {
+  if (!link) return null;
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto overscroll-contain px-4 py-6"
+      onClick={starting ? undefined : onSkip}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="direct-transcription-title"
+    >
+      <div className="absolute inset-0 bg-zinc-900/30 backdrop-blur-sm dark:bg-black/50" />
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="relative w-full max-w-md rounded-3xl border border-zinc-300/60 bg-white/95 p-5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-zinc-900/95"
+      >
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-indigo-50 text-indigo-600 dark:bg-indigo-500/15 dark:text-indigo-300">
+          <FileText className="h-6 w-6" />
+        </div>
+        <div className="mt-4 space-y-2 text-center">
+          <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+            Category selected
+          </p>
+          <h2 id="direct-transcription-title" className="text-xl font-semibold text-zinc-900 dark:text-zinc-100">
+            Transcribe this video now?
+          </h2>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            This YouTube link can be sent to MegaScribe now, or you can start transcription later from the link menu.
+          </p>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+          <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
+            {link.title}
+          </p>
+          <p className="mt-0.5 truncate text-xs text-zinc-500 dark:text-zinc-400">
+            {link.url}
+          </p>
+        </div>
+
+        {error && <p className="mt-4 text-center text-sm text-red-500 dark:text-red-400">{error}</p>}
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-2">
+          <button
+            type="button"
+            onClick={onSkip}
+            disabled={starting}
+            className="rounded-xl border border-zinc-200 px-4 py-3 text-sm font-medium text-zinc-700 hover:bg-zinc-50 disabled:opacity-50 dark:border-white/10 dark:text-zinc-200 dark:hover:bg-white/10"
+          >
+            Not now
+          </button>
+          <button
+            type="button"
+            onClick={onStart}
+            disabled={starting}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500 disabled:opacity-60"
+          >
+            {starting && <Loader2 className="h-4 w-4 animate-spin" />}
+            {starting ? "Starting…" : "Transcribe now"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

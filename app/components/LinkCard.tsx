@@ -17,6 +17,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
+import { isYouTubeUrl } from "@/lib/youtube-url";
 import { useModalBackButton } from "./useModalBackButton";
 import type { Category, Link } from "./types";
 
@@ -43,16 +44,6 @@ const ACTIVE_TRANSCRIPTION_STATUSES = new Set([
   "transcribing",
   "running",
 ]);
-
-function isYouTubeUrl(url: string) {
-  try {
-    const parsed = new URL(url);
-    const host = parsed.hostname.replace(/^www\./, "").toLowerCase();
-    return host === "youtube.com" || host === "youtu.be" || host.endsWith(".youtube.com");
-  } catch {
-    return false;
-  }
-}
 
 function isTranscriptionActive(status: string) {
   return ACTIVE_TRANSCRIPTION_STATUSES.has(status.toLowerCase());
