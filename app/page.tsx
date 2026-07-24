@@ -766,7 +766,7 @@ function DirectCategoryPicker({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto overscroll-contain px-4 py-6 sm:pt-24"
+      className="fixed inset-0 z-50 flex h-dvh max-h-dvh flex-col items-center overflow-hidden overscroll-contain px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))] sm:pt-24"
       onClick={onSkip}
       role="dialog"
       aria-modal="true"
@@ -775,9 +775,9 @@ function DirectCategoryPicker({
       <div className="absolute inset-0 bg-zinc-900/30 backdrop-blur-sm dark:bg-black/50" />
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative flex w-full max-w-2xl max-h-[calc(100dvh-3rem)] flex-col rounded-3xl border border-zinc-300/60 bg-white/90 p-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-zinc-900/90"
+        className="relative flex min-h-0 w-full max-w-2xl max-h-full flex-col overflow-hidden rounded-3xl border border-zinc-300/60 bg-white/90 p-5 shadow-2xl backdrop-blur-xl dark:border-white/15 dark:bg-zinc-900/90"
       >
-        <div className="space-y-1 text-center">
+        <div className="shrink-0 space-y-1 text-center">
           <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
             Saved to Uncategorized
           </p>
@@ -789,7 +789,7 @@ function DirectCategoryPicker({
           </p>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="mt-4 shrink-0 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-white/10 dark:bg-white/[0.03]">
           <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">
             {link.title}
           </p>
@@ -799,7 +799,7 @@ function DirectCategoryPicker({
         </div>
 
         {suggestedCategories.length > 0 ? (
-          <div className="mt-5 grid min-h-0 gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2">
+          <div className="mt-5 grid min-h-0 flex-1 gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2">
             {suggestedCategories.map((category) => (
               <button
                 key={category.id}
@@ -822,12 +822,14 @@ function DirectCategoryPicker({
             ))}
           </div>
         ) : (
-          <p className="mt-5 rounded-2xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
+          <p className="mt-5 shrink-0 rounded-2xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
             No categories yet — skip for now and create categories later.
           </p>
         )}
 
-        {error && <p className="mt-4 text-center text-sm text-red-500 dark:text-red-400">{error}</p>}
+        {error && (
+          <p className="mt-4 shrink-0 text-center text-sm text-red-500 dark:text-red-400">{error}</p>
+        )}
 
         <div className="mt-5 flex shrink-0 justify-center">
           <button
