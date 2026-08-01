@@ -15,9 +15,10 @@ import {
   FileText,
   Headphones,
   AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
-import { isYouTubeUrl } from "@/lib/youtube-url";
+import { buildExternalAppUrl, isYouTubeUrl } from "@/lib/youtube-url";
 import { useModalBackButton } from "./useModalBackButton";
 import type { Category, Link } from "./types";
 
@@ -180,6 +181,11 @@ export function LinkCard({
     } catch {
       setTranscriptionError("Could not copy link to clipboard");
     }
+  }
+
+  function handleOpenExternalApp() {
+    setMenuOpen(false);
+    window.location.assign(buildExternalAppUrl(link.url, window.navigator.userAgent));
   }
 
   function handleEdit() {
@@ -372,6 +378,7 @@ export function LinkCard({
           categories={categories}
           onClose={() => setMenuOpen(false)}
           onEdit={handleEdit}
+          onOpenExternalApp={handleOpenExternalApp}
           onCopyLink={handleCopyLink}
           onShare={handleShare}
           onDelete={handleDelete}
@@ -411,6 +418,7 @@ type MenuProps = {
   categories: Category[];
   onClose: () => void;
   onEdit: () => void;
+  onOpenExternalApp: () => void;
   onCopyLink: () => void;
   onShare: () => void;
   onDelete: () => void;
@@ -427,6 +435,7 @@ function LinkActionsMenu({
   categories,
   onClose,
   onEdit,
+  onOpenExternalApp,
   onCopyLink,
   onShare,
   onDelete,
@@ -470,6 +479,11 @@ function LinkActionsMenu({
               <p className="mt-0.5 text-xs text-zinc-500 truncate">{link.url}</p>
             </div>
             <div className="divide-y divide-zinc-200 dark:divide-white/10">
+              <MenuItem
+                icon={ExternalLink}
+                label="Open in external app"
+                onClick={onOpenExternalApp}
+              />
               <MenuItem icon={Pencil} label="Edit" onClick={onEdit} />
               <MenuItem icon={ClipboardCopy} label="Copy link" onClick={onCopyLink} />
               <MenuItem
