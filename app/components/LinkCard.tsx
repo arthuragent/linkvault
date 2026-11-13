@@ -245,7 +245,7 @@ export function LinkCard({
   return (
     <>
       <div
-        className="group rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-white/30 hover:bg-zinc-100 dark:hover:bg-white/[0.06] select-none md:flex md:items-stretch"
+        className="group rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-white/30 hover:bg-zinc-100 dark:hover:bg-white/[0.06] select-none md:flex md:flex-wrap md:items-stretch"
         style={{ touchAction: "manipulation" }}
         onPointerDown={startLongPress}
         onPointerUp={cancelLongPress}
@@ -255,7 +255,7 @@ export function LinkCard({
         onClickCapture={handleClickCapture}
         onContextMenu={handleContextMenu}
       >
-        <div className="flex items-center border-b border-zinc-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900 md:border-b-0 md:border-r md:justify-center md:px-3">
+        <div className="flex w-full min-w-0 items-center gap-2 border-b border-zinc-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900">
           <span
             className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full px-2 text-sm font-bold tabular-nums"
             style={{ backgroundColor: color, color: textOnColor }}
@@ -263,6 +263,24 @@ export function LinkCard({
           >
             {position}
           </span>
+          <div className="flex flex-1 flex-wrap items-center gap-2 min-w-0">
+            {link.checked && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex-shrink-0">
+                <CircleCheck className="h-3 w-3" />
+                Done
+              </span>
+            )}
+            {category && (
+              <span
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 max-w-full break-words text-xs font-medium"
+                style={{ backgroundColor: color, color: textOnColor }}
+              >
+                {category.emoji && <span>{category.emoji}</span>}
+                {category.name}
+              </span>
+            )}
+            <span className="text-xs text-zinc-500 truncate">{domain}</span>
+          </div>
         </div>
         {link.metaImage && (
           <a
@@ -286,24 +304,6 @@ export function LinkCard({
         )}
 
         <div className="p-4 md:flex-1 md:min-w-0 md:py-3 md:px-4">
-          <div className="flex items-center gap-2 min-w-0 mb-2">
-            {link.checked && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300 flex-shrink-0">
-                <CircleCheck className="h-3 w-3" />
-                Done
-              </span>
-            )}
-            {category && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium flex-shrink-0"
-                style={{ backgroundColor: color, color: textOnColor }}
-              >
-                {category.emoji && <span>{category.emoji}</span>}
-                {category.name}
-              </span>
-            )}
-            <span className="text-xs text-zinc-500 truncate">{domain}</span>
-          </div>
 
           <a
             href={link.url}
