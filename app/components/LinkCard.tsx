@@ -245,7 +245,7 @@ export function LinkCard({
   return (
     <>
       <div
-        className="group rounded-2xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-white/[0.03] overflow-hidden transition-all hover:border-zinc-300 dark:hover:border-white/30 hover:bg-zinc-100 dark:hover:bg-white/[0.06] select-none md:flex md:flex-wrap md:items-stretch"
+        className="group rounded-2xl border-2 border-zinc-300 dark:border-white/25 bg-zinc-50 dark:bg-white/[0.03] overflow-hidden transition-all hover:border-zinc-400 dark:hover:border-white/40 hover:bg-zinc-100 dark:hover:bg-white/[0.06] select-none md:flex md:flex-wrap md:items-stretch"
         style={{ touchAction: "manipulation" }}
         onPointerDown={startLongPress}
         onPointerUp={cancelLongPress}
