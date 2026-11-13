@@ -558,8 +558,9 @@ export default function Home() {
                     </button>
                     {uncategorizedOpen && (
                       <div className="space-y-3 px-4 pb-4">
-                        {uncategorizedLinks.map((link) => (
+                        {uncategorizedLinks.map((link, index) => (
                           <LinkCard
+                            position={index + 1}
                             key={link.id}
                             link={link}
                             categories={categories}

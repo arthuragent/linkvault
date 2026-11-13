@@ -99,10 +99,11 @@ export function CategoryGroup({
           {node.links.length === 0 && node.children.length === 0 && (
             <p className="text-sm text-zinc-500 italic">No links yet.</p>
           )}
-          {node.links.map((link) => (
+          {node.links.map((link, index) => (
             <LinkCard
               key={link.id}
               link={link}
+              position={index + 1}
               category={categoriesById.get(link.categoryId ?? "")}
               categories={categories}
               onDelete={onDeleteLink}

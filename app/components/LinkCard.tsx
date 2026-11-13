@@ -24,6 +24,7 @@ import type { Category, Link } from "./types";
 
 type Props = {
   link: Link;
+  position: number;
   category?: Category;
   categories: Category[];
   onDelete: (id: string) => void;
@@ -68,6 +69,7 @@ function transcriptionActionLabel(link: Link) {
 
 export function LinkCard({
   link,
+  position,
   category,
   categories,
   onDelete,
@@ -253,6 +255,15 @@ export function LinkCard({
         onClickCapture={handleClickCapture}
         onContextMenu={handleContextMenu}
       >
+        <div className="flex items-center border-b border-zinc-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900 md:border-b-0 md:border-r md:justify-center md:px-3">
+          <span
+            className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full px-2 text-sm font-bold tabular-nums"
+            style={{ backgroundColor: color, color: textOnColor }}
+            aria-label={`Link ${position}`}
+          >
+            {position}
+          </span>
+        </div>
         {link.metaImage && (
           <a
             href={link.url}
