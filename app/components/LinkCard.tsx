@@ -270,15 +270,6 @@ export function LinkCard({
                 Done
               </span>
             )}
-            {category && (
-              <span
-                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 max-w-full break-words text-xs font-medium"
-                style={{ backgroundColor: color, color: textOnColor }}
-              >
-                {category.emoji && <span>{category.emoji}</span>}
-                {category.name}
-              </span>
-            )}
             <span className="text-xs text-zinc-500 truncate">{domain}</span>
           </div>
         </div>
