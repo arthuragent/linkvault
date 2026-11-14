@@ -11,6 +11,7 @@ import {
   Search,
   ArrowRight,
   ClipboardPaste,
+  FolderPlus,
   Check,
   FileText,
   ChevronsDownUp,
@@ -598,6 +599,7 @@ export default function Home() {
         assigningCategoryId={assigningDirectCategoryId}
         error={directAssignError}
         onAssign={(categoryId) => void handleDirectAssignCategory(categoryId)}
+        onCategoryCreated={handleCategorySaved}
         onSkip={() => {
           setDirectSavedLink(null);
           setDirectAssignError(null);
@@ -724,6 +726,7 @@ type DirectCategoryPickerProps = {
   assigningCategoryId: string | null;
   error: string | null;
   onAssign: (categoryId: string) => void;
+  onCategoryCreated: (category: Category) => void;
   onSkip: () => void;
 };
 
@@ -750,8 +753,10 @@ function DirectCategoryPicker({
   assigningCategoryId,
   error,
   onAssign,
+  onCategoryCreated,
   onSkip,
 }: DirectCategoryPickerProps) {
+  const [addingCategory, setAddingCategory] = useState(false);
   const suggestedCategories = useMemo(() => {
     if (!link) return categories;
 
@@ -763,6 +768,21 @@ function DirectCategoryPicker({
   }, [categories, link]);
 
   if (!link) return null;
+
+  if (addingCategory) {
+    return (
+      <AddCategoryModal
+        open
+        categories={categories}
+        onClose={() => setAddingCategory(false)}
+        onSaved={(category) => {
+          onCategoryCreated(category);
+          setAddingCategory(false);
+          onAssign(category.id);
+        }}
+      />
+    );
+  }
 
   return (
     <div
@@ -798,6 +818,16 @@ function DirectCategoryPicker({
           </p>
         </div>
 
+        <button
+          type="button"
+          onClick={() => setAddingCategory(true)}
+          disabled={assigningCategoryId !== null}
+          className="mt-4 flex shrink-0 items-center justify-center gap-2 rounded-xl border border-indigo-300 bg-indigo-50 px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 dark:border-indigo-500/40 dark:bg-indigo-500/10 dark:text-indigo-300"
+        >
+          <FolderPlus className="h-4 w-4" />
+          New category
+        </button>
+
         {suggestedCategories.length > 0 ? (
           <div className="mt-5 grid min-h-0 flex-1 gap-2 overflow-y-auto overscroll-contain sm:grid-cols-2">
             {suggestedCategories.map((category) => (
@@ -823,7 +853,7 @@ function DirectCategoryPicker({
           </div>
         ) : (
           <p className="mt-5 shrink-0 rounded-2xl border border-dashed border-zinc-300 px-4 py-6 text-center text-sm text-zinc-500 dark:border-white/10 dark:text-zinc-400">
-            No categories yet — skip for now and create categories later.
+            No categories yet — create one above, or leave this link in Uncategorized.
           </p>
         )}
 
