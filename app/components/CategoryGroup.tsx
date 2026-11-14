@@ -15,6 +15,7 @@ type Props = {
   onDeleteLink: (id: string) => void;
   onDeleteCategory: (id: string) => void;
   onEditLink: (link: Link) => void;
+  onCategoryCreated: (category: Category) => void;
   onMoveLink: (id: string, categoryId: string | null) => void;
   onToggleChecked: (id: string, checked: boolean) => void;
   onRefreshLink: (link: Link) => Promise<void> | void;
@@ -33,6 +34,7 @@ export function CategoryGroup({
   onDeleteCategory,
   onEditLink,
   onMoveLink,
+  onCategoryCreated,
   onToggleChecked,
   onRefreshLink,
   onTranscribeLink,
@@ -109,6 +111,7 @@ export function CategoryGroup({
               onDelete={onDeleteLink}
               onEdit={onEditLink}
               onMove={onMoveLink}
+              onCategoryCreated={onCategoryCreated}
               onToggleChecked={onToggleChecked}
               onRefresh={onRefreshLink}
               onTranscribe={onTranscribeLink}
@@ -128,6 +131,7 @@ export function CategoryGroup({
               onDeleteCategory={onDeleteCategory}
               onEditLink={onEditLink}
               onMoveLink={onMoveLink}
+              onCategoryCreated={onCategoryCreated}
               onToggleChecked={onToggleChecked}
               onRefreshLink={onRefreshLink}
               onTranscribeLink={onTranscribeLink}

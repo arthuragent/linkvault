@@ -532,6 +532,7 @@ export default function Home() {
                     onDeleteCategory={handleDeleteCategory}
                     onEditLink={handleEditLink}
                     onMoveLink={handleMoveLink}
+                    onCategoryCreated={handleCategorySaved}
                     onToggleChecked={handleToggleChecked}
                     onRefreshLink={handleRefreshLink}
                     onTranscribeLink={handleTranscribeLink}
@@ -567,6 +568,7 @@ export default function Home() {
                             onDelete={handleDeleteLink}
                             onEdit={handleEditLink}
                             onMove={handleMoveLink}
+                            onCategoryCreated={handleCategorySaved}
                             onToggleChecked={handleToggleChecked}
                             onRefresh={handleRefreshLink}
                             onTranscribe={handleTranscribeLink}

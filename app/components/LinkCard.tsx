@@ -9,6 +9,7 @@ import {
   Check,
   CircleCheck,
   FolderInput,
+  FolderPlus,
   ArrowLeft,
   RefreshCw,
   Loader2,
@@ -19,6 +20,7 @@ import {
 } from "lucide-react";
 import { getDomain, isLightColor } from "@/lib/utils";
 import { buildExternalAppUrl, isYouTubeUrl } from "@/lib/youtube-url";
+import { AddCategoryModal } from "./AddCategoryModal";
 import { useModalBackButton } from "./useModalBackButton";
 import type { Category, Link } from "./types";
 
@@ -27,6 +29,7 @@ type Props = {
   position: number;
   category?: Category;
   categories: Category[];
+  onCategoryCreated: (category: Category) => void;
   onDelete: (id: string) => void;
   onEdit: (link: Link) => void;
   onMove: (id: string, categoryId: string | null) => void;
@@ -72,6 +75,7 @@ export function LinkCard({
   position,
   category,
   categories,
+  onCategoryCreated,
   onDelete,
   onEdit,
   onMove,
@@ -378,6 +382,7 @@ export function LinkCard({
         <LinkActionsMenu
           link={link}
           categories={categories}
+          onCategoryCreated={onCategoryCreated}
           onClose={() => setMenuOpen(false)}
           onEdit={handleEdit}
           onOpenExternalApp={handleOpenExternalApp}
@@ -418,6 +423,7 @@ export function LinkCard({
 type MenuProps = {
   link: Link;
   categories: Category[];
+  onCategoryCreated: (category: Category) => void;
   onClose: () => void;
   onEdit: () => void;
   onOpenExternalApp: () => void;
@@ -435,6 +441,7 @@ type MenuProps = {
 function LinkActionsMenu({
   link,
   categories,
+  onCategoryCreated,
   onClose,
   onEdit,
   onOpenExternalApp,
@@ -448,11 +455,12 @@ function LinkActionsMenu({
   canTranscribe,
   transcribing,
 }: MenuProps) {
-  const [view, setView] = useState<"actions" | "move">("actions");
+  const [view, setView] = useState<"actions" | "move" | "create">("actions");
 
-  useModalBackButton(true, onClose);
+  useModalBackButton(view !== "create", onClose);
 
   useEffect(() => {
+    if (view === "create") return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         if (view === "move") setView("actions");
@@ -462,6 +470,20 @@ function LinkActionsMenu({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose, view]);
+
+  if (view === "create") {
+    return (
+      <AddCategoryModal
+        open
+        categories={categories}
+        onClose={() => setView("move")}
+        onSaved={(category) => {
+          onCategoryCreated(category);
+          onPickCategory(category.id);
+        }}
+      />
+    );
+  }
 
   return (
     <div
@@ -532,6 +554,9 @@ function LinkActionsMenu({
               <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
                 Move to category
               </p>
+            </div>
+            <div className="border-b border-zinc-200 dark:border-white/10">
+              <MenuItem icon={FolderPlus} label="New category" onClick={() => setView("create")} />
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-zinc-200 dark:divide-white/10">
               <CategoryRow
