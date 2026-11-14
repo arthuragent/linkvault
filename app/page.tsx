@@ -30,28 +30,30 @@ import type { Category, CategoryNode, Link } from "./components/types";
 const STORAGE_KEY = "linkvault:ui-state";
 
 type PersistedState = {
-  activeCategoryId: string | null;
+  activeCategoryIds: string[];
   uncategorizedOpen: boolean;
   collapsedCategoryIds: string[];
 };
 
 function loadPersistedState(): PersistedState {
   if (typeof window === "undefined") {
-    return { activeCategoryId: null, uncategorizedOpen: true, collapsedCategoryIds: [] };
+    return { activeCategoryIds: [], uncategorizedOpen: true, collapsedCategoryIds: [] };
   }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { activeCategoryId: null, uncategorizedOpen: true, collapsedCategoryIds: [] };
-    const parsed = JSON.parse(raw) as Partial<PersistedState>;
+    if (!raw) return { activeCategoryIds: [], uncategorizedOpen: true, collapsedCategoryIds: [] };
+    const parsed = JSON.parse(raw) as Partial<PersistedState> & { activeCategoryId?: string };
     return {
-      activeCategoryId: parsed.activeCategoryId ?? null,
+      activeCategoryIds: Array.isArray(parsed.activeCategoryIds)
+        ? parsed.activeCategoryIds.filter((id): id is string => typeof id === "string")
+        : typeof parsed.activeCategoryId === "string" ? [parsed.activeCategoryId] : [],
       uncategorizedOpen: parsed.uncategorizedOpen ?? true,
       collapsedCategoryIds: Array.isArray(parsed.collapsedCategoryIds)
         ? parsed.collapsedCategoryIds
         : [],
     };
   } catch {
-    return { activeCategoryId: null, uncategorizedOpen: true, collapsedCategoryIds: [] };
+    return { activeCategoryIds: [], uncategorizedOpen: true, collapsedCategoryIds: [] };
   }
 }
 
@@ -60,7 +62,7 @@ export default function Home() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [activeCategoryId, setActiveCategoryId] = useState<string | null>(null);
+  const [activeCategoryIds, setActiveCategoryIds] = useState<string[]>([]);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
   const [categoryModalOpen, setCategoryModalOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -118,7 +120,7 @@ export default function Home() {
   // Load persisted UI state once on mount.
   useEffect(() => {
     const persisted = loadPersistedState();
-    setActiveCategoryId(persisted.activeCategoryId);
+    setActiveCategoryIds(persisted.activeCategoryIds);
     setUncategorizedOpen(persisted.uncategorizedOpen);
     setCollapsedCategoryIds(new Set(persisted.collapsedCategoryIds));
     setHydrated(true);
@@ -128,7 +130,7 @@ export default function Home() {
   useEffect(() => {
     if (!hydrated) return;
     const payload: PersistedState = {
-      activeCategoryId,
+      activeCategoryIds,
       uncategorizedOpen,
       collapsedCategoryIds: [...collapsedCategoryIds],
     };
@@ -137,7 +139,7 @@ export default function Home() {
     } catch {
       // storage unavailable — ignore
     }
-  }, [hydrated, activeCategoryId, uncategorizedOpen, collapsedCategoryIds]);
+  }, [hydrated, activeCategoryIds, uncategorizedOpen, collapsedCategoryIds]);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -179,7 +181,7 @@ export default function Home() {
   const filteredLinks = useMemo(() => {
     const q = search.trim().toLowerCase();
     return links.filter((link) => {
-      if (activeCategoryId && link.categoryId !== activeCategoryId) {
+      if (activeCategoryIds.length > 0 && !activeCategoryIds.includes(link.categoryId ?? "")) {
         return false;
       }
       if (!q) return true;
@@ -189,11 +191,12 @@ export default function Home() {
         (link.summary ?? "").toLowerCase().includes(q)
       );
     });
-  }, [links, search, activeCategoryId]);
+  }, [links, search, activeCategoryIds]);
 
   const tree = useMemo<CategoryNode[]>(() => {
     const nodes = new Map<string, CategoryNode>();
     for (const c of categories) {
+      if (activeCategoryIds.length > 0 && !activeCategoryIds.includes(c.id)) continue;
       nodes.set(c.id, { ...c, children: [], links: [] });
     }
     for (const link of filteredLinks) {
@@ -209,12 +212,8 @@ export default function Home() {
         roots.push(node);
       }
     }
-    if (activeCategoryId && nodes.has(activeCategoryId)) {
-      // When filtering, show only the selected category (and its descendants).
-      return [nodes.get(activeCategoryId)!];
-    }
     return roots;
-  }, [categories, filteredLinks, activeCategoryId]);
+  }, [categories, filteredLinks, activeCategoryIds]);
 
   const uncategorizedLinks = filteredLinks.filter((l) => !l.categoryId);
 
@@ -486,8 +485,8 @@ export default function Home() {
             <div className="flex-1">
               <CategoryDropdown
                 categories={categories}
-                activeId={activeCategoryId}
-                onSelect={setActiveCategoryId}
+                activeIds={activeCategoryIds}
+                onSelect={setActiveCategoryIds}
               />
             </div>
             {(() => {
