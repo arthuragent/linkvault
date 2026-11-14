@@ -481,7 +481,7 @@ export default function Home() {
           <SearchBar value={search} onChange={setSearch} autoFocus={searchOpen} />
         )}
 
-        {categories.length > 0 && (
+        {(categories.length > 0 || links.length > 0) && (
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <CategoryDropdown

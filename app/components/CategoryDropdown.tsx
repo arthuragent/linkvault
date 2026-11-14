@@ -13,7 +13,9 @@ type Props = {
 
 export function CategoryDropdown({ categories, activeIds, onSelect }: Props) {
   const [open, setOpen] = useState(false);
-  const selected = categories.filter((category) => activeIds.includes(category.id));
+  // Empty ID matches links with no category; an empty selection means all.
+  const options = [{ id: "", name: "Uncategorized", emoji: null }, ...categories];
+  const selected = options.filter((category) => activeIds.includes(category.id));
   const label = activeIds.length === 0
     ? "All categories"
     : selected.length === 1
@@ -45,7 +47,7 @@ export function CategoryDropdown({ categories, activeIds, onSelect }: Props) {
             All categories {activeIds.length === 0 ? "✓" : ""}
           </button>
           <p className="pb-2 text-xs text-zinc-500">Select one or more. No selection shows all categories.</p>
-          {categories.map((category) => (
+          {options.map((category) => (
             <label key={category.id} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-3 hover:bg-zinc-100 dark:hover:bg-white/10">
               <input
                 type="checkbox"
