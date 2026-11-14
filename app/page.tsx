@@ -23,6 +23,7 @@ import { CategoryGroup } from "./components/CategoryGroup";
 import { LinkCard } from "./components/LinkCard";
 import { SaveLinkModal } from "./components/SaveLinkModal";
 import { AddCategoryModal } from "./components/AddCategoryModal";
+import { BulkMoveBar } from "./components/BulkMoveBar";
 import { Sidebar } from "./components/Sidebar";
 import { isValidUrl } from "@/lib/utils";
 import { isYouTubeUrl } from "@/lib/youtube-url";
@@ -60,6 +61,24 @@ function loadPersistedState(): PersistedState {
 
 export default function Home() {
   const [links, setLinks] = useState<Link[]>([]);
+  const [selectedLinkIds, setSelectedLinkIds] = useState<Set<string>>(new Set());
+  const [bulkMoving, setBulkMoving] = useState(false);
+  const selectedExistingIds = links.filter(link => selectedLinkIds.has(link.id)).map(link => link.id);
+
+  function toggleLinkSelection(id: string) {
+    if (bulkMoving) return;
+    setSelectedLinkIds(previous => {
+      const next = new Set(previous);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  }
+
+  function handleBulkMoved(moved: Link[]) {
+    const byId = new Map(moved.map(link => [link.id, link]));
+    setLinks(previous => previous.map(link => byId.get(link.id) ?? link));
+    setSelectedLinkIds(previous => new Set([...previous].filter(id => !byId.has(id))));
+  }
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -520,10 +539,16 @@ export default function Home() {
               <EmptyState onAdd={openNewLink} />
             ) : (
               <div className="space-y-4">
+                {selectedExistingIds.length > 0 && (
+                  <BulkMoveBar selectedIds={selectedExistingIds} categories={categories} busy={bulkMoving} onBusy={setBulkMoving} onClear={() => setSelectedLinkIds(new Set())} onMoved={handleBulkMoved} onCategoryCreated={handleCategorySaved} />
+                )}
                 {tree.map((node) => (
                   <CategoryGroup
                     key={node.id}
                     node={node}
+                    selectedIds={selectedLinkIds}
+                    selectionDisabled={bulkMoving}
+                    onSelectLink={toggleLinkSelection}
                     categoriesById={categoriesById}
                     categories={categories}
                     collapsed={collapsedCategoryIds}
@@ -564,6 +589,9 @@ export default function Home() {
                             position={index + 1}
                             key={link.id}
                             link={link}
+                            selected={selectedLinkIds.has(link.id)}
+                            selectionDisabled={bulkMoving}
+                            onSelect={toggleLinkSelection}
                             categories={categories}
                             onDelete={handleDeleteLink}
                             onEdit={handleEditLink}

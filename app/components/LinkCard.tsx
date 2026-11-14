@@ -27,6 +27,9 @@ import type { Category, Link } from "./types";
 type Props = {
   link: Link;
   position: number;
+  selected: boolean;
+  selectionDisabled: boolean;
+  onSelect: (id: string) => void;
   category?: Category;
   categories: Category[];
   onCategoryCreated: (category: Category) => void;
@@ -73,6 +76,9 @@ function transcriptionActionLabel(link: Link) {
 export function LinkCard({
   link,
   position,
+  selected,
+  selectionDisabled,
+  onSelect,
   category,
   categories,
   onCategoryCreated,
@@ -260,6 +266,9 @@ export function LinkCard({
         onContextMenu={handleContextMenu}
       >
         <div className="flex w-full min-w-0 items-center gap-2 border-b border-zinc-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-zinc-900">
+          <label className="inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => event.stopPropagation()}>
+            <input type="checkbox" checked={selected} disabled={selectionDisabled} onChange={() => onSelect(link.id)} aria-label={`Select ${link.title}`} className="h-5 w-5 accent-indigo-600" />
+          </label>
           <span
             className="inline-flex h-8 min-w-8 shrink-0 items-center justify-center rounded-full px-2 text-sm font-bold tabular-nums"
             style={{ backgroundColor: color, color: textOnColor }}

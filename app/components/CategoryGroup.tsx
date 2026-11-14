@@ -7,6 +7,9 @@ import type { Category, CategoryNode, Link } from "./types";
 
 type Props = {
   node: CategoryNode;
+  selectedIds: Set<string>;
+  selectionDisabled: boolean;
+  onSelectLink: (id: string) => void;
   categoriesById: Map<string, Category>;
   categories: Category[];
   collapsed: Set<string>;
@@ -25,6 +28,9 @@ type Props = {
 
 export function CategoryGroup({
   node,
+  selectedIds,
+  selectionDisabled,
+  onSelectLink,
   categoriesById,
   categories,
   collapsed,
@@ -105,6 +111,9 @@ export function CategoryGroup({
             <LinkCard
               key={link.id}
               link={link}
+              selected={selectedIds.has(link.id)}
+              selectionDisabled={selectionDisabled}
+              onSelect={onSelectLink}
               position={index + 1}
               category={categoriesById.get(link.categoryId ?? "")}
               categories={categories}
@@ -122,6 +131,9 @@ export function CategoryGroup({
             <CategoryGroup
               key={child.id}
               node={child}
+              selectedIds={selectedIds}
+              selectionDisabled={selectionDisabled}
+              onSelectLink={onSelectLink}
               categoriesById={categoriesById}
               categories={categories}
               collapsed={collapsed}
