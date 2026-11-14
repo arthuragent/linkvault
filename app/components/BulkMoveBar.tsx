@@ -12,11 +12,13 @@ type Props = {
   onBusy: (busy: boolean) => void;
   onClear: () => void;
   onMoved: (links: Link[]) => void;
+  onDeleted: (ids: string[]) => void;
   onCategoryCreated: (category: Category) => void;
 };
 
-export function BulkMoveBar({ selectedIds, categories, busy, onBusy, onClear, onMoved, onCategoryCreated }: Props) {
+export function BulkMoveBar({ selectedIds, categories, busy, onBusy, onClear, onMoved, onDeleted, onCategoryCreated }: Props) {
   const [open, setOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -49,6 +51,34 @@ export function BulkMoveBar({ selectedIds, categories, busy, onBusy, onClear, on
     }
   }
 
+  async function deleteSelected() {
+    if (busy || selectedIds.length === 0) return;
+    onBusy(true);
+    setError(null);
+    const deleted: string[] = [];
+    let failed = 0;
+    try {
+      for (const id of selectedIds) {
+        try {
+          const response = await fetch(`/api/links/${encodeURIComponent(id)}`, { method: "DELETE" });
+          // Already-absent links count as deleted, allowing retries after a lost response.
+          if (response.status !== 404) {
+            const data = await response.json();
+            if (!response.ok || data.ok !== true) throw new Error("Delete failed");
+          }
+          deleted.push(id);
+        } catch {
+          failed += 1;
+        }
+      }
+      onDeleted(deleted);
+      if (failed) setError(`${deleted.length} deleted. ${failed} could not be deleted and remain selected. You can retry.`);
+      else setDeleteOpen(false);
+    } finally {
+      onBusy(false);
+    }
+  }
+
   const buttonClass = "rounded-lg border border-zinc-300 px-3 py-2 text-sm dark:border-white/20 disabled:opacity-50";
   return (
     <>
@@ -56,7 +86,19 @@ export function BulkMoveBar({ selectedIds, categories, busy, onBusy, onClear, on
         <span className="mr-auto text-sm font-semibold" role="status">{selectedIds.length} links selected</span>
         <button type="button" disabled={busy} className={buttonClass} onClick={onClear}>Clear selection</button>
         <button type="button" disabled={busy} className="rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => { setError(null); setOpen(true); }}>Move to category</button>
+        <button type="button" disabled={busy} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => { setError(null); setDeleteOpen(true); }}>Delete selected</button>
       </div>
+      <Modal open={deleteOpen} onClose={() => { if (!busy) setDeleteOpen(false); }} title={`Delete ${selectedIds.length} links?`}>
+        <div className="space-y-4">
+          <p className="text-sm">Permanently delete the {selectedIds.length} selected links? This cannot be undone.</p>
+          {error && <p role="alert" className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+          {busy && <p role="status" className="text-sm">Deleting links…</p>}
+          <div className="flex justify-end gap-2">
+            <button type="button" disabled={busy} className={buttonClass} onClick={() => setDeleteOpen(false)}>Cancel</button>
+            <button type="button" disabled={busy} className="rounded-lg bg-red-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50" onClick={() => void deleteSelected()}>Delete {selectedIds.length} links</button>
+          </div>
+        </div>
+      </Modal>
       <Modal open={open && !creating} onClose={() => { if (!busy) setOpen(false); }} title={`Move ${selectedIds.length} links`}>
         <div className="space-y-2">
           {busy && <p role="status" className="text-sm">Moving links…</p>}

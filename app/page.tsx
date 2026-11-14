@@ -74,6 +74,12 @@ export default function Home() {
     });
   }
 
+  function handleBulkDeleted(ids: string[]) {
+    const deleted = new Set(ids);
+    setLinks(previous => previous.filter(link => !deleted.has(link.id)));
+    setSelectedLinkIds(previous => new Set([...previous].filter(id => !deleted.has(id))));
+  }
+
   function handleBulkMoved(moved: Link[]) {
     const byId = new Map(moved.map(link => [link.id, link]));
     setLinks(previous => previous.map(link => byId.get(link.id) ?? link));
@@ -540,7 +546,7 @@ export default function Home() {
             ) : (
               <div className="space-y-4">
                 {selectedExistingIds.length > 0 && (
-                  <BulkMoveBar selectedIds={selectedExistingIds} categories={categories} busy={bulkMoving} onBusy={setBulkMoving} onClear={() => setSelectedLinkIds(new Set())} onMoved={handleBulkMoved} onCategoryCreated={handleCategorySaved} />
+                  <BulkMoveBar selectedIds={selectedExistingIds} categories={categories} busy={bulkMoving} onBusy={setBulkMoving} onClear={() => setSelectedLinkIds(new Set())} onMoved={handleBulkMoved} onDeleted={handleBulkDeleted} onCategoryCreated={handleCategorySaved} />
                 )}
                 {tree.map((node) => (
                   <CategoryGroup
