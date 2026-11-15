@@ -717,7 +717,7 @@ function DirectTranscriptionPrompt({
             Transcribe this video now?
           </h2>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">
-            This YouTube link can be sent to MegaScribe now, or you can start transcription later from the link menu.
+            Get the transcript now, or later from the link menu. Available captions are used first; otherwise the video is transcribed.
           </p>
         </div>
 

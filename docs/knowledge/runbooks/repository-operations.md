@@ -46,4 +46,29 @@ If unrelated local changes exist, do not modify or revert them. Stage only inten
 
 - Do not store secrets, env values, tokens, API keys, cookies, or database URLs in this KB.
 - Do not claim live production behavior from repository inspection alone.
+
+## Captions-first YouTube transcription (2026-11-15)
+
+- The existing transcription action first tries YouTube captions using `yt-dlp`.
+- Original-language human captions are preferred, then original automatic captions;
+  available human captions are a fallback. Auto-translated tracks are not selected.
+- Caption text is saved in the same `transcript_text` field and exposed through the
+  existing transcript page, TXT download and category export. This path does not
+  download audio or start a MegaScribe job.
+- Missing captions, blocked access, invalid responses or extraction failures fall
+  back to the existing MegaScribe API. Metadata extraction is limited to 18 seconds,
+  caption download to 5 seconds, and each payload to 4 MiB. The route budget is 60 seconds.
+- Completed saved transcripts and active provider jobs are reused on repeated POSTs.
+- `npm run build` installs the SHA-256-pinned standalone Linux `yt-dlp` binary;
+  Next.js includes `vendor/yt-dlp` in the transcription function's deployment trace.
+  It embeds Python. The build fails if downloading or verifying the binary fails.
+- Local non-Linux development: use `npm run dev` and set `YT_DLP_PATH` to an installed
+  executable. Production build targets Linux x64/arm64.
+- To upgrade, update the version and platform checksums in `scripts/install-yt-dlp.mjs`
+  from the official yt-dlp release. Do not commit the binary or credentials.
+- Verification: `node --experimental-strip-types lib/youtube-captions.test.ts`,
+  `node scripts/transcription-route.test.mjs`, and `npm run build`.
+- Live probe from the development server encountered YouTube's bot challenge;
+  successful live extraction is not established by fixture tests. The fallback
+  remains necessary and a deployment can also encounter provider IP restrictions.
 - Do not use session history as canonical truth if this KB or live source says otherwise.

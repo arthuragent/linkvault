@@ -2,9 +2,11 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { links } from "@/lib/schema";
 import { eq } from "drizzle-orm";
+import { fetchYouTubeCaptions } from "@/lib/youtube-captions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type Ctx = { params: Promise<{ id: string }> };
 
@@ -155,7 +157,7 @@ async function getLink(id: string) {
   return rows[0] ?? null;
 }
 
-export async function POST(_req: Request, { params }: Ctx) {
+export async function POST(req: Request, { params }: Ctx) {
   const { id } = await params;
   const link = await getLink(id);
   if (!link) {
@@ -166,6 +168,28 @@ export async function POST(_req: Request, { params }: Ctx) {
       { error: "Transcription is currently available for YouTube video links only." },
       { status: 400 },
     );
+  }
+
+  if (link.transcriptionStatus === "completed" && link.transcriptText) {
+    return NextResponse.json({ link });
+  }
+  if (link.transcriptionJobId && !TERMINAL_STATUSES.has(link.transcriptionStatus)) {
+    return NextResponse.json({ link }, { status: 202 });
+  }
+
+  const captions = await fetchYouTubeCaptions(link.url);
+  if (captions) {
+    const updated = await db.update(links).set({
+      transcriptionStatus: "completed",
+      transcriptionJobId: null,
+      transcriptText: captions,
+      transcriptUrl: linkVaultTranscriptUrl(req, id),
+      audioUrl: null,
+      transcriptionError: null,
+      transcriptionRequestedAt: new Date(),
+      transcriptionCompletedAt: new Date(),
+    }).where(eq(links.id, id)).returning();
+    return NextResponse.json({ link: updated[0] });
   }
 
   const { response, data, error } = await callMegaScribe("/api/v1/transcriptions", {
